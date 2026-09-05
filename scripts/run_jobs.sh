@@ -54,7 +54,9 @@ supervise() {
 }
 
 log "supervisor up"
-# Spotify is banned until ~23h from 2026-09-03; re-enable after that.
-# supervise "spotify" scripts/resolve_spotify.py 30000 &
+# Verified clear on 2026-09-05: the 23h ban from 2026-09-03 has lapsed and a
+# live search returns results on the rotated credentials. Paced at ~0.8/sec,
+# not the 3/sec that earned the ban.
+supervise "spotify" scripts/resolve_spotify.py 30000 &
 supervise "ratings" scripts/backfill_ratings.py 25000 &
 wait
