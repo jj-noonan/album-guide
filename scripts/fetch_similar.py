@@ -25,6 +25,7 @@ import requests
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import db  # noqa: E402
+import seeds  # noqa: E402
 
 OUT = HERE.parent / "data" / "similar-artists.json"
 GRAPH = HERE.parent / "data" / "similarity-graph.json"
@@ -36,66 +37,26 @@ UA = "seebugbus-eval/0.1 (jj@noonan.cc)"
 # Deliberately spread across idioms so the suite can't pass by being good at
 # one kind of music: stadium pop, heartland rock, jam band, blues revival,
 # alt-country, hip-hop, indie rock, classic soul.
-# Seeds for the evaluation fixture.
+# Seeds come from data/seeds.json, in batches, so the held-out group can
+# rotate over time. scripts/seeds.py owns that logic and the rule that a batch
+# which has been used as a crawl source can never be held out again.
 #
-# The first ten were the artists picked to sanity-check paths by hand. Ten
-# seeds and 100 offers turned out to be too thin to tune against: a three-point
-# difference is three offers, which is noise, and knob sweeps were landing
-# inside it. The rest widen the base deliberately across era, genre and fame,
-# because a suite drawn only from canonical American rock would happily approve
-# an engine that is good at canonical American rock.
-#
-# Skipped silently if absent from the catalog, so this list can name artists
-# the crawl has not reached yet.
-SEEDS = [
-    # The original hand-checked set.
-    "Taylor Swift", "Bruce Springsteen", "Grateful Dead", "Alabama Shakes",
-    "Wilco", "Kendrick Lamar", "The National", "Stevie Wonder",
-    "Fleetwood Mac", "Nirvana",
-    # Rock and pop across five decades.
-    "The Beatles", "David Bowie", "Fleet Foxes", "Radiohead", "Pixies",
-    "Talking Heads", "Joni Mitchell", "Prince", "Beyoncé", "Lana Del Rey",
-    "R.E.M.", "Pavement", "The Cure", "Kate Bush", "Sonic Youth",
-    # Country, folk and soul.
-    "Dolly Parton", "Johnny Cash", "Aretha Franklin", "Marvin Gaye",
-    "Emmylou Harris", "Sturgill Simpson", "Bill Withers",
-    # Hip hop and R&B.
-    "OutKast", "A Tribe Called Quest", "Missy Elliott", "Frank Ocean",
-    "Nas", "SZA",
-    # Electronic, jazz and further out.
-    "Aphex Twin", "Daft Punk", "Burial", "Miles Davis", "John Coltrane",
-    "Alice Coltrane", "Portishead", "Björk", "Brian Eno", "Fela Kuti",
-    "Sigur Rós", "Massive Attack",
-]
-
-# Held out from catalog building, on purpose.
-#
-# crawl_gaps.py fetches artists that this fixture names as similar to a seed,
-# which is the right thing for the product — a listener wants Adele to exist —
-# but it means the catalog gets stocked with the very answers the metric looks
-# for. Agreement on those seeds is then partly self-fulfilling, and a tuning
-# loop that rewards its own catalog decisions will happily walk in a circle.
-#
-# These seeds are never used as a crawl source. Nothing is fetched because
-# they name it, so their agreement measures what the engine can do with a
-# catalog assembled independently of them. That is the number to trust when
-# the two disagree.
-#
-# If a future change needs more coverage, extend SEEDS and leave these alone.
-HELDOUT = [
-    "Neil Young", "Patti Smith", "Curtis Mayfield", "Nick Drake",
-    "The Velvet Underground", "Cocteau Twins", "My Bloody Valentine",
-    "Erykah Badu", "D'Angelo", "Charles Mingus", "Sun Ra",
-    "Neutral Milk Hotel", "Vampire Weekend", "The Replacements",
-    "Randy Newman", "Tom Waits", "Steely Dan", "Big Star",
-]
+# They were two hardcoded lists here. That worked while the split was fixed and
+# stops working the moment it rotates, since the fixture has to agree with
+# whatever crawl_gaps is currently allowed to read.
 
 
 def main() -> int:
     conn = db.connect()
     out: dict[str, dict] = {}
 
-    for name in SEEDS + HELDOUT:
+    doc = seeds.load()
+    held = set(seeds.held_out(doc))
+    names = seeds.all_artists(doc)
+    print(f"{len(names)} seeds — {len(names) - len(held)} for tuning, "
+          f"{len(held)} held out (batch {doc['heldOutBatch']})")
+
+    for name in names:
         row = conn.execute(
             """SELECT a.id, a.name, COUNT(i.id) n FROM artists a
                JOIN items i ON i.artist_id = a.id
@@ -135,7 +96,7 @@ def main() -> int:
             "albumsInCatalog": row["n"],
             # Tagged so crawl_gaps can refuse to read from these, and so the
             # suite can report them as their own number.
-            "heldOut": name in HELDOUT,
+            "heldOut": name in held,
             "similar": similar,
         }
         print(f"  {name}: {len(similar)} similar artists, {row['n']} albums held")
