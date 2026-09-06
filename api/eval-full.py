@@ -88,13 +88,71 @@ def load_pool(conn: sqlite3.Connection) -> tuple[list[dict], dict[str, dict]]:
     return pool, {p["id"]: p for p in pool}
 
 
+_SHARED: dict = {}
+
+
+def _init_worker(pool, graph, tuning):
+    """Each process gets one copy of the pool; it is read-only."""
+    _SHARED["pool"] = pool
+    _SHARED["graph"] = graph
+    engine.TUNING.update(tuning)
+
+
+def _eval_seed(job):
+    """One seed's offers across every dial. Returns counts, not objects."""
+    seed_id, accepted, held, starts, dials = job
+    pool = _SHARED["pool"]
+    graph = _SHARED["graph"]
+
+    def knows(a, b):
+        return b in graph.get(a, ()) or a in graph.get(b, ())
+
+    per_dial = {d: [0, 0] for d in dials}
+    quals = {d: [] for d in dials}
+    offered = set()
+    near = [0, 0]
+    for start in starts:
+        for dial in dials:
+            for b in engine.pick_branches(start, pool, dial, {start["id"]}):
+                a = b["item"]["artistId"]
+                ok = bool(a) and (a in accepted or a == seed_id or knows(seed_id, a))
+                per_dial[dial][1] += 1
+                quals[dial].append(b["item"]["quality"])
+                offered.add(b["item"]["id"])
+                if ok:
+                    per_dial[dial][0] += 1
+                if dial == 0.0:
+                    near[1] += 1
+                    if ok:
+                        near[0] += 1
+    return seed_id, held, per_dial, quals, offered, near
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--starts", type=int, default=20)
+    ap.add_argument("--workers", type=int, default=0)
+    ap.add_argument("--set", action="append", default=[], metavar="KEY=VALUE",
+                    help="override a TUNING constant for this run, e.g. --set jitter=0.3")
+    ap.add_argument("--min-quality", type=float, default=0.0,
+                    help="score only albums at or above this quality. A quality "
+                         "floor, deliberately not a popularity floor: quality is "
+                         "devotion, so a low score means people tried it and did "
+                         "not return, while low popularity is the obscurity this "
+                         "app exists to reach into.")
+    ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--limit-pool", type=int, default=0,
                     help="score against only the N most-listened albums, to "
                          "compare like with like against the bundled suite")
     args = ap.parse_args()
+
+    for kv in args.set:
+        k, v = kv.split("=", 1)
+        if k not in engine.TUNING:
+            print(f"unknown tuning key {k!r}", file=sys.stderr)
+            return 1
+        engine.TUNING[k] = float(v)
+        print(f"override: {k} = {engine.TUNING[k]}")
 
     fx = json.loads((ROOT / "data" / "similar-artists.json").read_text())
     graph = {}
@@ -108,6 +166,12 @@ def main() -> int:
     conn = sqlite3.connect(f"file:{ROOT/'data'/'catalog-api.sqlite'}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     pool, by_id = load_pool(conn)
+
+    if args.min_quality > 0:
+        before = len(pool)
+        pool = [p for p in pool if p["quality"] >= args.min_quality]
+        by_id = {p["id"]: p for p in pool}
+        print(f"quality floor {args.min_quality}: {before:,} -> {len(pool):,} albums")
 
     if args.limit_pool:
         pool = sorted(pool, key=lambda p: -p["popularity"])[: args.limit_pool]
@@ -126,30 +190,56 @@ def main() -> int:
     offered: set[str] = set()
     offers_made = 0
 
+    jobs = []
+    names = {}
     for seed_id, seed in fx["seeds"].items():
-        accepted = {s["mbid"] for s in seed["similar"]}
         starts = by_artist.get(seed_id, [])[: args.starts]
         if not starts:
             continue
-        bucket = "held" if seed.get("heldOut") else "tuning"
-        for start in starts:
-            for dial in DIALS:
-                for b in engine.pick_branches(start, pool, dial, {start["id"]}):
-                    a = b["item"]["artistId"]
-                    ok = bool(a) and (a in accepted or a == seed_id or knows(seed_id, a))
-                    per_dial[dial][1] += 1
-                    qual_by_dial[dial].append(b["item"]["quality"])
-                    offered.add(b["item"]["id"])
-                    offers_made += 1
-                    if ok:
-                        per_dial[dial][0] += 1
-                    if dial == 0.0:
-                        group[bucket][1] += 1
-                        s = per_seed.setdefault(seed["name"], [0, 0, bucket])
-                        s[1] += 1
-                        if ok:
-                            group[bucket][0] += 1
-                            s[0] += 1
+        names[seed_id] = (seed["name"], "held" if seed.get("heldOut") else "tuning")
+        jobs.append((seed_id, {s["mbid"] for s in seed["similar"]},
+                     bool(seed.get("heldOut")), starts, DIALS))
+
+    import multiprocessing as mp
+    workers = args.workers or max(1, mp.cpu_count() - 2)
+    print(f"scoring {len(jobs)} seeds across {workers} workers")
+    with mp.Pool(workers, initializer=_init_worker,
+                 initargs=(pool, graph, dict(engine.TUNING))) as mpool:
+        for seed_id, held, pd, qs, off, near in mpool.imap_unordered(_eval_seed, jobs):
+            name, bucket = names[seed_id]
+            for d in DIALS:
+                per_dial[d][0] += pd[d][0]
+                per_dial[d][1] += pd[d][1]
+                qual_by_dial[d].extend(qs[d])
+                offers_made += pd[d][1]
+            offered |= off
+            group[bucket][0] += near[0]
+            group[bucket][1] += near[1]
+            per_seed[name] = [near[0], near[1], bucket]
+
+    # Chance, computed the same way the hits are counted — including reverse
+    # graph matches, or the baseline would be narrower than the test and the
+    # lift would be manufactured.
+    #
+    # This matters more here than in the bundled suite. Raw agreement is lower
+    # at full scale simply because a seed's neighbours are a smaller share of
+    # 88,887 than of 11,476; without a baseline the drop reads as the engine
+    # getting worse when it may be the opposite.
+    by_artist_count: dict[str, int] = {}
+    for p_ in pool:
+        if p_["artistId"]:
+            by_artist_count[p_["artistId"]] = by_artist_count.get(p_["artistId"], 0) + 1
+    chances = []
+    for seed_id, seed in fx["seeds"].items():
+        if seed_id not in by_artist:
+            continue
+        acc = {s["mbid"] for s in seed["similar"]}
+        for other in list(by_artist_count):
+            if other not in acc and knows(seed_id, other):
+                acc.add(other)
+        reachable = sum(by_artist_count.get(a, 0) for a in acc) + by_artist_count.get(seed_id, 0)
+        chances.append(reachable / max(1, len(pool)))
+    chance = sum(chances) / max(1, len(chances))
 
     print("\nagreement by terrain setting:")
     for d in DIALS:
@@ -166,6 +256,9 @@ def main() -> int:
     print(f"  HELD OUT       {rate(group['held']):5.1f}%  "
           f"({group['held'][0]}/{group['held'][1]})  <- the number to trust")
     print(f"  gap            {rate(group['tuning']) - rate(group['held']):+.1f} points")
+    print(f"\n  chance         {100*chance:5.2f}%  (mean share of the pool that counts as a hit)")
+    print(f"  LIFT held-out  {rate(group['held']) / max(1e-9, 100*chance):5.1f}x")
+    print(f"  LIFT overall   {100*per_dial[0.0][0]/max(1,per_dial[0.0][1]) / max(1e-9, 100*chance):5.1f}x")
 
     med = lambda xs: statistics.median(xs) if xs else 0  # noqa: E731
     cat_q = med([p["quality"] for p in pool])
