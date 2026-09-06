@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sqlite3
 import statistics
 import sys
@@ -250,9 +251,33 @@ def main() -> int:
     def rate(g):
         return 100 * g[0] / max(1, g[1])
 
+    def interval(g) -> tuple[float, float]:
+        """
+        Wilson score interval, 95%.
+
+        Every proportion here is a handful of hundreds of offers, and I read a
+        4.8-point difference between two held-out batches as a finding when it
+        was inside the noise of both. Printing the interval next to the number
+        makes that mistake take deliberate effort rather than inattention.
+
+        Wilson rather than the normal approximation because these proportions
+        sit far enough from 0.5, on samples small enough, that the simple
+        formula is visibly wrong at the edges.
+        """
+        n, k = g[1], g[0]
+        if n == 0:
+            return (0.0, 0.0)
+        z = 1.96
+        phat = k / n
+        denom = 1 + z * z / n
+        centre = (phat + z * z / (2 * n)) / denom
+        half = z * math.sqrt(phat * (1 - phat) / n + z * z / (4 * n * n)) / denom
+        return (100 * (centre - half), 100 * (centre + half))
+
     print("\nnear-end agreement by seed group:")
+    tlo, thi = interval(group['tuning'])
     print(f"  tuning seeds   {rate(group['tuning']):5.1f}%  "
-          f"({group['tuning'][0]}/{group['tuning'][1]})")
+          f"({group['tuning'][0]}/{group['tuning'][1]})  95% CI {tlo:.1f}-{thi:.1f}")
     # Held-out is a gate, not a target.
     #
     # Sweeping a constant and picking whichever value maximises this number
@@ -260,8 +285,12 @@ def main() -> int:
     # The discipline is: optimise on tuning seeds, then require that held-out
     # agrees before taking the change. A value that wins here and not there is
     # noise; a value that wins there and loses here is overfitting.
+    lo, hi = interval(group['held'])
     print(f"  HELD OUT       {rate(group['held']):5.1f}%  "
-          f"({group['held'][0]}/{group['held'][1]})  <- the number to trust")
+          f"({group['held'][0]}/{group['held'][1]})  "
+          f"95% CI {lo:.1f}-{hi:.1f}  <- the number to trust")
+    print(f"                 a change is only a result if it clears "
+          f"+/-{(hi - lo) / 2:.1f} points")
     print(f"  gap            {rate(group['tuning']) - rate(group['held']):+.1f} points")
     print(f"\n  chance         {100*chance:5.2f}%  (mean share of the pool that counts as a hit)")
     print(f"  LIFT held-out  {rate(group['held']) / max(1e-9, 100*chance):5.1f}x")
