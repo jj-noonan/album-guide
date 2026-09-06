@@ -19,6 +19,7 @@ import {
   cachedOffers,
   loadOffers,
   prefetchOffers,
+  fetchRandom,
   type ApiOffer,
 } from './data/api';
 import {
@@ -304,12 +305,37 @@ export default function App() {
     return out;
   }, [current, trail, focusIndex, dial, pool, byId, fbWeights, apiOffers]);
 
-  const wildcard = useMemo(() => {
+  /*
+   * The shuffle draws from the whole catalog when the API is reachable, and
+   * from the bundle when it is not.
+   *
+   * Locally it can only pick from the 11,476 albums that fit in the bundle,
+   * which quietly re-imposes the selection the shuffle exists to escape: the
+   * records least likely to be bundled are exactly the ones worth stumbling
+   * into. Same seed either way, so the surprise is stable per card.
+   */
+  const localWildcard = useMemo(() => {
     if (!current) return null;
     // Exclude the scored offers too, so the wildcard is never a duplicate door.
     const exclude = new Set([...trail.slice(0, focusIndex + 1), ...branches.map((b) => b.item.id)]);
     return pickWildcard(pool, exclude, current.id);
   }, [current, trail, focusIndex, branches, pool]);
+
+  const [remoteWildcard, setRemoteWildcard] = useState<Item | null>(null);
+  useEffect(() => {
+    if (!apiConfigured() || !current) {
+      setRemoteWildcard(null);
+      return;
+    }
+    let live = true;
+    const exclude = [...trail.slice(0, focusIndex + 1), ...branches.map((b) => b.item.id)];
+    void fetchRandom(current.id, exclude).then((item) => {
+      if (live) setRemoteWildcard(item);
+    });
+    return () => { live = false; };
+  }, [current, trail, focusIndex, branches]);
+
+  const wildcard = remoteWildcard ?? localWildcard;
 
   // Named rather than indexed, so key bindings track the role on screen
   // instead of the order the engine happened to return them in.

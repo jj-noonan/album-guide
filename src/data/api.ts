@@ -145,6 +145,23 @@ export function prefetchOffers(ids: string[], dial: number): void {
   }
 }
 
+/**
+ * One album at random from the whole catalog, for the shuffle.
+ *
+ * The local wildcard draws from the bundle, which is 11,476 of 100,931 — the
+ * shuffle is supposed to be the move with the rules switched off, and drawing
+ * only from the bundled slice is the same rules wearing a different hat.
+ */
+export async function fetchRandom(
+  seed: string,
+  exclude: string[],
+): Promise<Item | null> {
+  const out = await get<{ item: RawAlbum | null }>(
+    `/v1/random?seed=${encodeURIComponent(seed)}&exclude=${exclude.slice(0, 40).join(',')}`,
+  );
+  return out?.item ? toItem(out.item) : null;
+}
+
 export async function searchApi(q: string, limit = 12): Promise<Item[]> {
   const out = await get<{ items: RawAlbum[] }>(
     `/v1/search?q=${encodeURIComponent(q)}&limit=${limit}`,

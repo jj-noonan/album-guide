@@ -256,6 +256,33 @@ def get_recs(conn, item_id: str, dial: float, limit: int) -> dict:
     }
 
 
+def get_random(conn, exclude: set[str], seed: str) -> dict | None:
+    """
+    One album at random from everything scorable.
+
+    The shuffle is the move the engine cannot make — a record chosen with the
+    rules switched off. Drawn from the client's bundle it was choosing from
+    11,476 of 100,931, which is the same rules by another name: the 88% least
+    likely to be bundled could never turn up. This draws from all of it.
+
+    Seeded from the card it was rolled on, so the same card offers the same
+    surprise. A shuffle that changes every render is not a door, it is a slot
+    machine, and stepping back would land somewhere new each time.
+    """
+    if _POOL is None:
+        return None
+    n = len(_POOL)
+    if not n:
+        return None
+    start = int(engine.hash01(f"wild:{seed}") * n)
+    for i in range(n):
+        cand = _POOL[(start + i) % n]
+        if cand["id"] not in exclude:
+            items = get_items(conn, [cand["id"]])
+            return items[0] if items else None
+    return None
+
+
 def get_search(conn, text: str, limit: int) -> list[dict]:
     """
     Find an album by name, or an artist by name.
@@ -348,6 +375,10 @@ class Handler(BaseHTTPRequestHandler):
                     dial = 0.0
                 out = get_recs(self.conn, one("id"), dial, limit)
                 self._send(404 if out.get("error") == "not found" else 200, out)
+            elif u.path == "/v1/random":
+                ex = {i for i in one("exclude").split(",") if MBID.match(i)}
+                item = get_random(self.conn, ex, one("seed") or "x")
+                self._send(200, {"item": item})
             elif u.path == "/v1/search":
                 self._send(200, {"items": get_search(self.conn, one("q"), limit)})
             elif u.path == "/v1/health":
