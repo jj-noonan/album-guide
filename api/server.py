@@ -26,6 +26,7 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import engine  # noqa: E402
+from scores import absolute_popularity, absolute_quality  # noqa: E402
 DB = ROOT / "data" / "catalog-api.sqlite"
 
 MBID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -38,62 +39,6 @@ def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
-
-
-# Must match scripts/export_catalog.py. See the note there on why this is
-# frozen rather than measured.
-PRIOR_DEVOTION = 7.85
-# Devotion deciles p10=3.05 and p90=21.2 mapped onto quality 2 and 8.
-QUALITY_SLOPE = 6.0 / (math.log10(21.2) - math.log10(3.05))
-QUALITY_INTERCEPT = 2.0 - QUALITY_SLOPE * math.log10(3.05)
-DEVOTION_CAP = 30.0
-PRIOR_RATING = 3.4
-
-
-def absolute_quality(listens, listeners, rating, votes) -> float:
-    """Devotion on a fixed 0-10 scale. Mirrors export_catalog.absolute_quality."""
-    n = max(0, listeners or 0)
-    if n == 0:
-        # Unknown sits just below the middle: not rewarded like a loved record,
-        # not buried like a bad one.
-        return 4.5
-    plays = min(max(0, listens or 0), DEVOTION_CAP * n)
-    k = 80
-    devotion = (plays + PRIOR_DEVOTION * k) / (n + k)
-
-    votes = votes or 0
-    if rating is not None and votes >= 2:
-        adj = (rating * votes + PRIOR_RATING * 6) / (votes + 6)
-        devotion *= 1 + ((adj - PRIOR_RATING) / 5.0) * 1.2
-
-    # Log, then stretched onto 0-10 by fixed anchors.
-    #
-    # A saturating d/(d+prior) map was tried first and squeezed the whole
-    # catalog into 4.5-8.2 — a p10..p90 spread of 2.8 points where the old
-    # percentile spanned ten. Quality then barely moved the score at all, and
-    # the far-end quality check went from +2.3 above the catalog median to
-    # +0.2, which is the signal disappearing rather than the engine improving.
-    #
-    # The anchors are the catalog's own devotion deciles at the time the scale
-    # was frozen (p10 3.05, p90 21.2 plays per listener), mapped to 2 and 8.
-    # Fixed numbers, so a record's quality does not depend on what it was
-    # measured alongside.
-    if devotion <= 0:
-        return 0.0
-    q = QUALITY_SLOPE * math.log10(devotion) + QUALITY_INTERCEPT
-    return round(max(0.0, min(10.0, q)), 2)
-
-
-def absolute_popularity(listeners: int | None) -> float:
-    """
-    Listeners on a fixed 0-10 scale, independent of any population.
-
-    Must match scripts/export_catalog.py exactly. A percentile would not: this
-    server ranks over 100,931 albums and the client ships 12,000, so the same
-    album would score differently either side of the wire and the engine's
-    popularity target would quietly mean two things at once.
-    """
-    return round(min(10.0, 2.0 * math.log10(1.0 + max(0, listeners or 0))), 2)
 
 
 def art_path(url: str | None) -> str | None:

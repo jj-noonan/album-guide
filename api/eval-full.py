@@ -31,6 +31,7 @@ sys.path.insert(0, str(HERE))
 ROOT = HERE.parent
 
 import engine  # noqa: E402
+from scores import absolute_popularity, absolute_quality  # noqa: E402
 
 DIALS = [0.0, 0.25, 0.5, 0.75, 1.0]
 
@@ -49,30 +50,6 @@ def load_pool(conn: sqlite3.Connection) -> tuple[list[dict], dict[str, dict]]:
             {"tag": sys.intern(t["tag"]), "count": t["count"]}
         )
 
-    # Mirrors absolute_popularity / absolute_quality in api/server.py. Imported
-    # rather than restated would be better; server.py starts a listener on
-    # import, so the formulas are duplicated here and checked by api-check.
-    import math
-
-    def pop(listeners):
-        return round(min(10.0, 2.0 * math.log10(1.0 + max(0, listeners or 0))), 2)
-
-    PRIOR, CAP, PR = 7.85, 30.0, 3.4
-    SLOPE = 6.0 / (math.log10(21.2) - math.log10(3.05))
-    INTER = 2.0 - SLOPE * math.log10(3.05)
-
-    def qual(listens, listeners, rating, votes):
-        n = max(0, listeners or 0)
-        if n == 0:
-            return 4.5
-        plays = min(max(0, listens or 0), CAP * n)
-        d = (plays + PRIOR * 80) / (n + 80)
-        votes = votes or 0
-        if rating is not None and votes >= 2:
-            adj = (rating * votes + PR * 6) / (votes + 6)
-            d *= 1 + ((adj - PR) / 5.0) * 1.2
-        return 0.0 if d <= 0 else round(max(0.0, min(10.0, SLOPE * math.log10(d) + INTER)), 2)
-
     pool = []
     for r in rows:
         t = tags.get(r["id"], ())
@@ -80,9 +57,9 @@ def load_pool(conn: sqlite3.Connection) -> tuple[list[dict], dict[str, dict]]:
             continue
         pool.append({
             "id": r["id"], "idBytes": r["id"].encode(), "artistId": r["artist_id"],
-            "popularity": pop(r["listener_count"]),
-            "quality": qual(r["listen_count"], r["listener_count"],
-                            r["rating"], r["rating_votes"]),
+            "popularity": absolute_popularity(r["listener_count"]),
+            "quality": absolute_quality(r["listen_count"], r["listener_count"],
+                                        r["rating"], r["rating_votes"]),
             "sv": engine.scaled_vector(engine.derive_vector(t, r["year_start"])),
             "tagSet": engine.musical_tags(t),
         })
