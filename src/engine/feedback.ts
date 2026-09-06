@@ -113,7 +113,8 @@ export function summary() {
 
 /** A readable dump, for pasting somewhere it can be looked at properly. */
 export function exportText(byId: Map<string, Item>): string {
-  const rows = read().map((e) => {
+  const entries = read();
+  const rows = entries.map((e) => {
     const it = byId.get(e.id);
     const from = e.fromId ? byId.get(e.fromId) : undefined;
     return [
@@ -121,8 +122,24 @@ export function exportText(byId: Map<string, Item>): string {
       (e.role ?? '').padEnd(7),
       `dial ${(e.dial ?? 0).toFixed(2)}`,
       `${it?.subtitle ?? e.artist ?? '?'} — ${it?.title ?? e.title ?? '?'}`,
-      from || e.fromTitle ? `  (after ${from?.subtitle ?? ''} — ${from?.title ?? e.fromTitle})` : '',
+      from || e.fromTitle
+        ? `  (after ${from?.subtitle ?? ''} — ${from?.title ?? e.fromTitle})`
+        : '',
+      // The mbid, so a judgement can be looked up exactly rather than matched
+      // on a title. Two albums share a name more often than seems reasonable,
+      // and a reissue shares it with its original.
+      `  [${e.id}${e.fromId ? ` after ${e.fromId}` : ''}]`,
     ].join('  ');
   });
-  return [`album.guide feedback — ${rows.length} judgements`, ...rows].join('\n');
+  const counts = entries.reduce(
+    (acc, e) => ({ ...acc, [e.verdict]: (acc[e.verdict] ?? 0) + 1 }),
+    {} as Record<string, number>,
+  );
+  return [
+    `album.guide feedback — ${rows.length} judgements`,
+    `good ${counts.good ?? 0} · meh ${counts.meh ?? 0} · bad ${counts.bad ?? 0}`,
+    `catalog ${byId.size.toLocaleString()} bundled · exported ${new Date().toISOString()}`,
+    '',
+    ...rows,
+  ].join('\n');
 }

@@ -1,7 +1,7 @@
 {
  "source": "ListenBrainz Labs similar-artists",
  "algorithm": "session_based_days_7500_session_300_contribution_5_threshold_10_limit_100_filter_True_skip_30",
- "fetchedAt": "2026-09-05T23:45:38Z",
+ "fetchedAt": "2026-09-06T05:24:38Z",
  "seeds": {
   "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d": {
    "name": "The Beatles",
@@ -33992,7 +33992,7 @@
   "94b0fb9d-a066-4823-b2ec-af1d324bcfcf": {
    "name": "The Velvet Underground",
    "albumsInCatalog": 16,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
@@ -34499,7 +34499,7 @@
   "a6de8ef9-b1a1-4756-97aa-481bbb8a4069": {
    "name": "Joni Mitchell",
    "albumsInCatalog": 21,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "72c536dc-7137-4477-a521-567eeb840fa8",
@@ -35006,7 +35006,7 @@
   "75167b8b-44e4-407b-9d35-effe87b223cf": {
    "name": "Neil Young",
    "albumsInCatalog": 39,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "72c536dc-7137-4477-a521-567eeb840fa8",
@@ -35513,7 +35513,7 @@
   "4dca4bb2-23ba-4103-97e6-5810311db33a": {
    "name": "Curtis Mayfield",
    "albumsInCatalog": 8,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "1ee18fb3-18a6-4c7f-8ba0-bc41cdd0462e",
@@ -36020,7 +36020,7 @@
   "8ca01f46-53ac-4af2-8516-55a909c0905e": {
    "name": "My Bloody Valentine",
    "albumsInCatalog": 3,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -36527,7 +36527,7 @@
   "000fc734-b7e1-4a01-92d1-f544261b43f5": {
    "name": "Cocteau Twins",
    "albumsInCatalog": 8,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "a16371b9-7d36-497a-a9d4-42b0a0440c5e",
@@ -37034,7 +37034,7 @@
   "d135874d-9cae-4fef-97e3-36acbd9f5a26": {
    "name": "Patti Smith",
    "albumsInCatalog": 19,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "8f92558c-2baa-4758-8c38-615519e9deda",
@@ -37541,7 +37541,7 @@
   "af37c51c-0790-4a29-b995-456f98a6b8c9": {
    "name": "Vampire Weekend",
    "albumsInCatalog": 5,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "ada7a83c-e3e1-40f1-93f9-3e73dbc9298a",
@@ -38048,7 +38048,7 @@
   "96855c21-b832-4366-ba12-0d2330c36a86": {
    "name": "Phoebe Bridgers",
    "albumsInCatalog": 3,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "20244d07-534f-4eff-b4d4-930878889970",
@@ -38555,7 +38555,7 @@
   "9f81247f-7f57-42f3-a8ba-75bef554e591": {
    "name": "Big Thief",
    "albumsInCatalog": 6,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "185527bf-c293-4c24-8213-ed98fb8976be",
@@ -39062,7 +39062,7 @@
   "fa58cf24-0e44-421d-8519-8bf461dcfaa5": {
    "name": "Mitski",
    "albumsInCatalog": 8,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "96855c21-b832-4366-ba12-0d2330c36a86",
@@ -39569,7 +39569,7 @@
   "321531fc-db73-4ffa-a959-61a61a2908c1": {
    "name": "Erykah Badu",
    "albumsInCatalog": 7,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "9a709693-b4f8-4da9-8cc1-038c911a61be",
@@ -40076,7 +40076,7 @@
   "b66771cc-45fa-4a32-b14f-5337d7223d7a": {
    "name": "D\u2019Angelo",
    "albumsInCatalog": 3,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "e8414012-4a1c-4ad4-be5e-fc55294e28cc",
@@ -40583,7 +40583,7 @@
   "164f0d73-1234-4e2c-8743-d77bf2191051": {
    "name": "Ye",
    "albumsInCatalog": 50,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "381086ea-f511-4aba-bdf9-71c753dc5077",
@@ -41090,7 +41090,7 @@
   "99ea432a-e3d8-42cb-9d5e-db316a6a8458": {
    "name": "Nick Drake",
    "albumsInCatalog": 3,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -41597,7 +41597,7 @@
   "d67d1a21-6e45-4dd6-aef0-0191ba3796e0": {
    "name": "Townes Van Zandt",
    "albumsInCatalog": 14,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "d43d12a1-2dc9-4257-a2fd-0a3bb1081b86",
@@ -42104,7 +42104,7 @@
   "da7bb7d8-557d-4635-9ca1-e6e985525bd5": {
    "name": "Randy Newman",
    "albumsInCatalog": 52,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "ebfc1398-8d96-47e3-82c3-f782abcdb13d",
@@ -42611,7 +42611,7 @@
   "dc0d05ce-2f47-4962-b4fa-8631a0a51987": {
    "name": "The Replacements",
    "albumsInCatalog": 7,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "b6b2bb8d-54a9-491f-9607-7b546023b433",
@@ -43118,7 +43118,7 @@
   "21d177ba-3d51-461e-9b3f-ad9a80b419dc": {
    "name": "Big Star",
    "albumsInCatalog": 7,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
@@ -43625,7 +43625,7 @@
   "f3b8e107-abe8-4743-b6a3-4a4ee995e71f": {
    "name": "Charles Mingus",
    "albumsInCatalog": 13,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "b625448e-bf4a-41c3-a421-72ad46cdb831",
@@ -44132,7 +44132,7 @@
   "c27cac8e-4c4a-48c0-a4ba-41399b9c176d": {
    "name": "Sun Ra",
    "albumsInCatalog": 58,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "b625448e-bf4a-41c3-a421-72ad46cdb831",
@@ -44639,7 +44639,7 @@
   "a506f761-2c22-4b2f-8a94-bd748c2c8f75": {
    "name": "Neutral Milk Hotel",
    "albumsInCatalog": 5,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -45146,7 +45146,7 @@
   "e01c3376-15fa-40d7-b747-5f219bdefdd7": {
    "name": "Steely Dan",
    "albumsInCatalog": 11,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "bd13909f-1c29-4c27-a874-d4aaf27c5b1a",
@@ -45653,7 +45653,7 @@
   "c3aeb863-7b26-4388-94e8-5a240f2be21b": {
    "name": "Tom Waits",
    "albumsInCatalog": 25,
-   "heldOut": true,
+   "heldOut": false,
    "similar": [
     {
      "mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
@@ -46160,7 +46160,7 @@
   "2944824d-4c26-476f-a981-be849081942f": {
    "name": "Nina Simone",
    "albumsInCatalog": 24,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "d59c4cda-11d9-48db-8bfe-b557ee602aed",
@@ -46667,7 +46667,7 @@
   "82b1f5fd-cd31-41a9-b5d4-7e33f0eb9751": {
    "name": "Otis Redding",
    "albumsInCatalog": 9,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "2f9ecbed-27be-40e6-abca-6de49d50299e",
@@ -47174,7 +47174,7 @@
   "17b53d9f-5c63-4a09-a593-dde4608e0db9": {
    "name": "The Kinks",
    "albumsInCatalog": 25,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "b071f9fa-14b0-4217-8e97-eb41da73f598",
@@ -47681,7 +47681,7 @@
   "331ce348-1b08-40b9-8ed7-0763b92bd003": {
    "name": "Roxy Music",
    "albumsInCatalog": 8,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
@@ -48188,7 +48188,7 @@
   "5700dcd4-c139-4f31-aa3e-6382b9af9032": {
    "name": "Kraftwerk",
    "albumsInCatalog": 9,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "8538e728-ca0b-4321-b7e5-cff6565dd4c0",
@@ -48695,7 +48695,7 @@
   "13501c7d-d181-45ba-af52-5f101d8516a0": {
    "name": "Can",
    "albumsInCatalog": 15,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "5441c29d-3602-4898-b1a1-b77fa23b8e50",
@@ -49202,7 +49202,7 @@
   "9a58fda3-f4ed-4080-a3a5-f457aac9fcdd": {
    "name": "Joy Division",
    "albumsInCatalog": 2,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "69ee3720-a7cb-4402-b48d-a02c366f2bcf",
@@ -49709,7 +49709,7 @@
   "f1106b17-dcbb-45f6-b938-199ccfab50cc": {
    "name": "New Order",
    "albumsInCatalog": 12,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "69ee3720-a7cb-4402-b48d-a02c366f2bcf",
@@ -50216,7 +50216,7 @@
   "a16371b9-7d36-497a-a9d4-42b0a0440c5e": {
    "name": "Slowdive",
    "albumsInCatalog": 7,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "8ca01f46-53ac-4af2-8516-55a909c0905e",
@@ -50723,7 +50723,7 @@
   "65041e06-83d2-4987-ae52-c17a915fc82a": {
    "name": "Spiritualized",
    "albumsInCatalog": 10,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -51230,7 +51230,7 @@
   "3ac482b8-1494-4071-a0e9-f192f9d2c2b0": {
    "name": "Built to Spill",
    "albumsInCatalog": 10,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "a96ac800-bfcb-412a-8a63-0a98df600700",
@@ -51737,7 +51737,7 @@
   "3f542031-b054-454d-b57b-812fa2a81b11": {
    "name": "Yo La Tengo",
    "albumsInCatalog": 20,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -52244,7 +52244,7 @@
   "42faad37-8aaa-42e4-a300-5a7dae79ed24": {
    "name": "Low",
    "albumsInCatalog": 14,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -52751,7 +52751,7 @@
   "05755bf1-380c-487f-983f-d1a02401fa28": {
    "name": "Cat Power",
    "albumsInCatalog": 13,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -53258,7 +53258,7 @@
   "e795e03d-b5d5-4a5f-834d-162cfb308a2c": {
    "name": "PJ Harvey",
    "albumsInCatalog": 25,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "a74b1b7f-71a5-4011-9441-d0b5e4122711",
@@ -53765,7 +53765,7 @@
   "8247a3f2-3a8e-4256-b322-6c57b03a4e36": {
    "name": "Bill Evans",
    "albumsInCatalog": 47,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "561d854a-6a28-4aa7-8c99-323e6ce46c2a",
@@ -54272,7 +54272,7 @@
   "169c0d1b-fcb8-4a43-9097-829aa7b39205": {
    "name": "Ornette Coleman",
    "albumsInCatalog": 27,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "561d854a-6a28-4aa7-8c99-323e6ce46c2a",
@@ -54779,7 +54779,7 @@
   "3af06bc4-68ad-4cae-bb7a-7eeeb45e411f": {
    "name": "Duke Ellington",
    "albumsInCatalog": 65,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "b625448e-bf4a-41c3-a421-72ad46cdb831",
@@ -55286,7 +55286,7 @@
   "4e024037-14b7-4aea-99ad-c6ace63b9620": {
    "name": "Madvillain",
    "albumsInCatalog": 2,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "e864aa1b-5dc6-4f76-9425-c5d98e289d3e",
@@ -55793,7 +55793,7 @@
   "188711ed-c99b-439c-844a-ca831f63a727": {
    "name": "MF DOOM",
    "albumsInCatalog": 8,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "4e024037-14b7-4aea-99ad-c6ace63b9620",
@@ -56300,7 +56300,7 @@
   "cbcbb22c-3a8d-46af-b4ba-09c98f0d7931": {
    "name": "J Dilla",
    "albumsInCatalog": 30,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "ea9078ef-20ca-4506-81ea-2ae5fe3a42e8",
@@ -56807,7 +56807,7 @@
   "a8ebde98-7e91-46c7-992c-90039ba42017": {
    "name": "De La Soul",
    "albumsInCatalog": 13,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "e21857d5-3256-4547-afb3-4b6ded592596",
@@ -57314,7 +57314,7 @@
   "410e7fd3-b865-4fa0-bb18-1b7fd53382ca": {
    "name": "Solange",
    "albumsInCatalog": 4,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "ee190f6b-7d98-43ec-b924-da5f8018eca0",
@@ -57821,7 +57821,7 @@
   "3cdb40fe-a63e-4bb9-b40d-17cda5f50979": {
    "name": "Little Simz",
    "albumsInCatalog": 6,
-   "heldOut": false,
+   "heldOut": true,
    "similar": [
     {
      "mbid": "37e87694-b263-4ff4-839f-463f78cfef54",
