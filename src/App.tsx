@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { CATALOG_STATS, ITEMS, ITEM_BY_ID } from './data/catalog';
 import { CORRIDOR_BY_ID } from './data/corridors';
 import type { Item } from './data/schema';
@@ -14,6 +14,7 @@ import { SearchBox } from './components/SearchBox';
 import { Die, ROLL_MS } from './components/Die';
 import { About } from './components/About';
 import { Feedback } from './components/Feedback';
+import { apiConfigured, fetchRecs } from './data/api';
 import {
   weights as feedbackWeights,
   verdictFor,
@@ -80,13 +81,25 @@ export default function App() {
    * a wildcard, and sit in the trail like anything else.
    */
   const [ingested, setIngested] = useState<Item[]>(initialIngested);
-  const pool = useMemo(() => (ingested.length ? [...ITEMS, ...ingested] : ITEMS), [ingested]);
+  const [fetched, setFetched] = useState<Item[]>([]);
+  const fetchedIds = useRef(new Set<string>());
+
+  /*
+   * The pool the engine scores: what shipped, what search pulled in, and what
+   * the API has supplied for cards seen this session. Merged rather than
+   * swapped, so an absent API leaves the app exactly as it was.
+   */
+  const pool = useMemo(
+    () => (ingested.length || fetched.length ? [...ITEMS, ...ingested, ...fetched] : ITEMS),
+    [ingested, fetched],
+  );
   const byId = useMemo(() => {
-    if (!ingested.length) return ITEM_BY_ID;
+    if (!ingested.length && !fetched.length) return ITEM_BY_ID;
     const m = new Map(ITEM_BY_ID);
     for (const i of ingested) m.set(i.id, i);
+    for (const i of fetched) m.set(i.id, i);
     return m;
-  }, [ingested]);
+  }, [ingested, fetched]);
 
   const addIngested = useCallback((item: Item) => {
     setIngested((cur) => {
@@ -152,6 +165,33 @@ export default function App() {
   const [fbVersion, setFbVersion] = useState(0);
   const fbWeights = useMemo(() => feedbackWeights(), [fbVersion]);
   const noteFeedback = useCallback(() => setFbVersion((v) => v + 1), []);
+
+  /*
+   * Candidates fetched from the API for the card in focus.
+   *
+   * The bundled catalog is 12,000 albums of 100,931; these are the rest,
+   * fetched for the card being looked at rather than downloaded up front.
+   * Kept for the session so stepping back does not re-offer a different set,
+   * which would silently rewrite a path the listener already walked.
+   *
+   * Nothing here is required. With no API configured, or one that is asleep or
+   * unreachable, this stays empty and the engine scores the bundled catalog
+   * exactly as it did before.
+   */
+  useEffect(() => {
+    if (!apiConfigured() || !current) return;
+    let live = true;
+    void fetchRecs(current.id, dial).then((items) => {
+      if (!live || !items.length) return;
+      const fresh = items.filter((i) => !fetchedIds.current.has(i.id));
+      if (!fresh.length) return;
+      fresh.forEach((i) => fetchedIds.current.add(i.id));
+      // Capped: a long session would otherwise grow the pool without bound and
+      // slow every subsequent pick.
+      setFetched((cur) => [...cur, ...fresh].slice(-4000));
+    });
+    return () => { live = false; };
+  }, [current, dial]);
 
   const branches = useMemo<Branch[]>(() => {
     if (!current) return [];

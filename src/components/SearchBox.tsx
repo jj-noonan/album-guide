@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Item } from '../data/schema';
 import { ingest, validate, enqueue, noteSearchHit, type Candidate } from '../engine/ingest';
+import { apiConfigured, searchApi } from '../data/api';
 import { useToast } from './Toast';
 import './SearchBox.css';
 
@@ -56,6 +57,34 @@ export function SearchBox({ pool, onPick, onIngest, onOpenChange }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /*
+   * Matches from the API, merged in beneath local ones.
+   *
+   * The local index only covers the 12,000 bundled albums, so searching for
+   * something in the other 88% found nothing and fell through to a live
+   * MusicBrainz lookup — slower, and it re-fetched records the catalog already
+   * held. Joni Mitchell has 21 albums in the database and none in the bundle.
+   *
+   * Local results still come first and appear instantly; these arrive when
+   * they arrive. With no API they never arrive and nothing changes.
+   */
+  const [apiHits, setApiHits] = useState<Item[]>([]);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!apiConfigured() || q.length < 2) {
+      setApiHits([]);
+      return;
+    }
+    let live = true;
+    // Debounced: a request per keystroke would spend most of them on prefixes
+    // nobody is looking for.
+    const t = window.setTimeout(() => {
+      void searchApi(q).then((items) => { if (live) setApiHits(items); });
+    }, 180);
+    return () => { live = false; window.clearTimeout(t); };
+  }, [query]);
+
   const results = useMemo(() => {
     const q = normalise(query.trim());
     if (q.length < 2) return [];
@@ -66,8 +95,12 @@ export function SearchBox({ pool, onPick, onIngest, onOpenChange }: Props) {
       if (s > 0) hits.push({ item, s: s * 100 + (10 - item.obscurity) });
     }
     hits.sort((a, b) => b.s - a.s);
-    return hits.slice(0, LIMIT).map((h) => h.item);
-  }, [query, pool]);
+    const local = hits.slice(0, LIMIT).map((h) => h.item);
+    if (!apiHits.length) return local;
+    // Local first, then anything the API found that is not already listed.
+    const seen = new Set(local.map((i) => i.id));
+    return [...local, ...apiHits.filter((i) => !seen.has(i.id))].slice(0, LIMIT);
+  }, [query, pool, apiHits]);
 
   useEffect(() => setCursor(0), [query]);
 

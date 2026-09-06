@@ -18,6 +18,8 @@
     "click-check": "vite-node scripts/click-check.tsx",
     "feedback-check": "vite-node scripts/feedback-check.tsx",
     "dist-check": "vite-node scripts/dist-check.ts",
+    "api-wire-check": "vite-node scripts/api-wire-check.ts",
+    "api": ".venv/bin/python api/server.py",
     "publish": "bash scripts/publish.sh",
     "ratings": ".venv/bin/python -u scripts/backfill_ratings.py",
     "backfill": ".venv/bin/python -u scripts/backfill_popularity.py",
