@@ -4,6 +4,7 @@
 *
 !api/server.py
 !api/engine.py
+!api/scores.py
 !data/lexicon.json
 !data/engine-constants.json
 !data/catalog-api.sqlite

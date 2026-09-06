@@ -52,6 +52,11 @@ if ! command -v fly >/dev/null 2>&1; then
   exit 0
 fi
 
+# Cheap, and it has caught a broken image twice. Better here than after a
+# deploy has reported success and the URL has stopped answering.
+log "checking the image has everything the server imports"
+bash api/image-check.sh || { log "image check failed — not deploying the API"; exit 1; }
+
 log "rebuilding the API database"
 .venv/bin/python api/make-api-db.py || { log "api db build failed"; exit 1; }
 log "deploying the API"

@@ -14,6 +14,7 @@ WORKDIR /app
 # deploy that reports success and a machine that never answers.
 COPY api/server.py /app/api/server.py
 COPY api/engine.py /app/api/engine.py
+COPY api/scores.py /app/api/scores.py
 COPY data/lexicon.json /app/data/lexicon.json
 COPY data/engine-constants.json /app/data/engine-constants.json
 COPY data/catalog-api.sqlite /app/data/catalog-api.sqlite

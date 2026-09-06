@@ -101,6 +101,11 @@ for this reason — don't remove it.
 `api/server.py` and `data/catalog-api.sqlite`. Without it, the 143 MB crawl
 database and `node_modules` go up on every deploy.
 
+**The machine starts and dies immediately.** Run `npm run image-check`, which
+copies exactly the paths the Dockerfile names into an empty directory and
+starts the server from them. This has caught the failure twice; both times the
+ordinary checks passed, because locally the whole repo is on disk.
+
 **The machine starts and dies immediately.** The image copies exactly the
 files the server opens: `api/server.py`, `api/engine.py`, `data/lexicon.json`,
 `data/engine-constants.json` and the database. Adding a runtime dependency
