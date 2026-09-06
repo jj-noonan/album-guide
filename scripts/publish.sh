@@ -37,3 +37,23 @@ Claude-Session: https://claude.ai/code/session_01LwNoBivL7KZjNZ7H5NwKdN" || { lo
 
 git push origin main || { log "push failed"; exit 1; }
 log "published ${ALBUMS} of ${TOTAL} albums; Pages workflow triggered"
+
+# The API serves its own copy of the database, so publishing the bundle alone
+# leaves browsing on stale data while the offline floor is fresh — the opposite
+# of what anyone would expect. Both move together or the two disagree about
+# what the catalog contains.
+if [ "${SKIP_API:-0}" = "1" ]; then
+  log "SKIP_API=1 — leaving the API on its current snapshot"
+  exit 0
+fi
+if ! command -v fly >/dev/null 2>&1; then
+  log "flyctl not installed — the API still serves its previous snapshot."
+  log "  install it, then: .venv/bin/python api/make-api-db.py && fly deploy"
+  exit 0
+fi
+
+log "rebuilding the API database"
+.venv/bin/python api/make-api-db.py || { log "api db build failed"; exit 1; }
+log "deploying the API"
+fly deploy || { log "fly deploy failed — the site is live on the new bundle,";                 log "  but the API is still on its previous snapshot"; exit 1; }
+log "API updated; both halves now serve the same catalog"
