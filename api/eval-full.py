@@ -253,6 +253,13 @@ def main() -> int:
     print("\nnear-end agreement by seed group:")
     print(f"  tuning seeds   {rate(group['tuning']):5.1f}%  "
           f"({group['tuning'][0]}/{group['tuning'][1]})")
+    # Held-out is a gate, not a target.
+    #
+    # Sweeping a constant and picking whichever value maximises this number
+    # turns the held-out set into a second tuning set, one slow read at a time.
+    # The discipline is: optimise on tuning seeds, then require that held-out
+    # agrees before taking the change. A value that wins here and not there is
+    # noise; a value that wins there and loses here is overfitting.
     print(f"  HELD OUT       {rate(group['held']):5.1f}%  "
           f"({group['held'][0]}/{group['held'][1]})  <- the number to trust")
     print(f"  gap            {rate(group['tuning']) - rate(group['held']):+.1f} points")
