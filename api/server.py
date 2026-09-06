@@ -246,30 +246,46 @@ def get_search(conn, text: str, limit: int) -> list[dict]:
         return []
 
     match = " ".join(f'"{w}"*' for w in words)
-    q = f"""
-        {SELECT}, (
-            CASE
-                WHEN lower(a.name) = ?            THEN 3
-                WHEN lower(a.name) LIKE ? THEN 2
-                WHEN lower(i.title) LIKE ? THEN 1
-                ELSE 0
-            END
-        ) AS quality
-        JOIN items_fts f ON f.item_id = i.id
-        WHERE items_fts MATCH ? AND {ELIGIBLE}
-        ORDER BY quality DESC, i.listener_count DESC NULLS LAST
-        LIMIT ?
-    """
     joined = " ".join(words)
     like = f"%{joined}%"
+
+    # Built as one SELECT rather than appending to the shared one.
+    #
+    # The ranking CASE used to be concatenated after SELECT, which already ends
+    # with its FROM clause — so the expression landed after FROM and SQLite
+    # raised a syntax error on every search. The error was caught and the code
+    # fell through to the substring scan below, which finds "graceland" and
+    # "paul simon" separately and cannot find "graceland paul simon", because
+    # the words live in different columns. Search has been running on a full
+    # table scan and quietly failing the most natural query anyone types.
+    q = f"""
+        SELECT i.id, i.title, i.artist_id, i.year_start, i.art_url,
+               i.listen_count, i.listener_count, i.rating, i.rating_votes,
+               i.spotify_id, a.name AS artist_name, a.country AS artist_country,
+               CASE
+                   WHEN lower(a.name) = ?      THEN 3
+                   WHEN lower(a.name) LIKE ?   THEN 2
+                   WHEN lower(i.title) LIKE ?  THEN 1
+                   ELSE 0
+               END AS rank_quality
+        FROM items i
+        LEFT JOIN artists a ON a.id = i.artist_id
+        JOIN items_fts f ON f.item_id = i.id
+        WHERE items_fts MATCH ? AND {ELIGIBLE}
+        ORDER BY rank_quality DESC, i.listener_count DESC
+        LIMIT ?
+    """
     try:
         rows = conn.execute(q, (joined, like, like, match, limit)).fetchall()
-    except sqlite3.OperationalError:
+    except sqlite3.OperationalError as e:
+        # Loudly, not silently. A malformed query here looked exactly like "no
+        # results" for as long as it took someone to search two words.
+        print(f"  search query failed: {e}", flush=True)
         rows = []
 
     if not rows:
         # FTS tokenises on punctuation, so "usa" cannot match a title written
-        # "U.S.A." and the query returns nothing at all rather than something
+        # "U.S.A." and the index returns nothing at all rather than something
         # imperfect. A substring pass costs a scan and only runs when the index
         # has already failed, which is rare and always better than no answer.
         flat = re.sub(r"[^a-z0-9]", "", joined)
@@ -279,11 +295,186 @@ def get_search(conn, text: str, limit: int) -> list[dict]:
                 replace(replace(replace(lower(i.title), '.', ''), ' ', ''), '-', '') LIKE ?
                 OR replace(replace(lower(a.name), '.', ''), ' ', '') LIKE ?
             )
-            ORDER BY i.listener_count DESC NULLS LAST LIMIT ?
+            ORDER BY i.listener_count DESC
+            LIMIT ?
         """
         rows = conn.execute(q2, (f"%{flat}%", f"%{flat}%", limit)).fetchall()
 
-    return rows_to_items(conn, rows)
+    if not rows:
+        return []
+    ids = [r["id"] for r in rows]
+    tags: dict[str, list] = {i: [] for i in ids}
+    # Chunked: SQLite's parameter limit is 999 and a large id list would blow it.
+    for start in range(0, len(ids), 500):
+        chunk = ids[start:start + 500]
+        q = f"SELECT item_id, tag, count FROM item_tags WHERE item_id IN ({','.join('?' * len(chunk))})"
+        for t in conn.execute(q, chunk):
+            tags[t["item_id"]].append({"tag": t["tag"], "count": t["count"]})
+    return [{
+        "id": r["id"], "title": r["title"], "artistId": r["artist_id"],
+        "artistName": r["artist_name"] or "", "year": r["year_start"],
+        "art": art_path(r["art_url"]), "tags": tags.get(r["id"], []),
+        "corridorIds": [],
+        "listenCount": r["listen_count"], "listenerCount": r["listener_count"],
+        "popularity": absolute_popularity(r["listener_count"]),
+        "quality": absolute_quality(r["listen_count"], r["listener_count"],
+                                    r["rating"], r["rating_votes"]),
+        "country": r["artist_country"], "rating": r["rating"],
+        "spotifyId": r["spotify_id"],
+    } for r in rows]
+
+
+SELECT = """
+    SELECT i.id, i.title, i.artist_id, i.year_start, i.art_url,
+           i.listen_count, i.listener_count, i.rating, i.rating_votes, i.spotify_id,
+           a.name AS artist_name, a.country AS artist_country
+    FROM items i LEFT JOIN artists a ON a.id = i.artist_id
+"""
+ELIGIBLE = """
+    i.art_url IS NOT NULL
+    AND EXISTS (SELECT 1 FROM item_tags t WHERE t.item_id = i.id)
+"""
+
+
+def get_items(conn, ids: list[str]) -> list[dict]:
+    ids = [i for i in ids if MBID.match(i)][:MAX_IDS]
+    if not ids:
+        return []
+    q = f"{SELECT} WHERE i.id IN ({','.join('?' * len(ids))})"
+    return rows_to_items(conn, conn.execute(q, ids).fetchall())
+
+
+# Built once at startup: the whole scorable catalog, shaped for the engine.
+#
+# Deriving vectors and tag sets per request would redo the same work for every
+# card. ~92,000 albums at a few hundred bytes each is well inside the machine's
+# memory, and it is read-only, so every thread shares one copy.
+_POOL: list[dict] | None = None
+_POOL_BY_ID: dict[str, dict] = {}
+
+
+def build_pool(conn: sqlite3.Connection) -> None:
+    """
+    Load the scorable catalog into memory, as small as it will go.
+
+    The first attempt held 296 MB and was OOM-killed on a 256 MB machine. Three
+    things accounted for it, none of them the database — SQLite memory-maps
+    that and reads pages on demand.
+
+    The intermediate tag structures cost 109 MB and are only needed while
+    building, so they are dropped before serving. Each entry kept a full
+    sqlite3.Row of every column, when scoring needs six fields and the two
+    chosen albums can be re-queried by id. And each kept both the raw vector
+    and its scaled form, when only the scaled one is ever read.
+
+    Tag strings are interned: 356,000 tag rows draw on about 5,800 distinct
+    words, so without it the same word is stored thousands of times over.
+    """
+    global _POOL
+    rows = conn.execute(
+        """SELECT i.id, i.artist_id, i.year_start, i.listen_count,
+                  i.listener_count, i.rating, i.rating_votes
+           FROM items i
+           WHERE i.art_url IS NOT NULL
+             AND EXISTS (SELECT 1 FROM item_tags t WHERE t.item_id = i.id)"""
+    ).fetchall()
+
+    tags: dict[str, list] = {}
+    for t in conn.execute("SELECT item_id, tag, count FROM item_tags"):
+        tags.setdefault(t["item_id"], []).append(
+            {"tag": sys.intern(t["tag"]), "count": t["count"]}
+        )
+
+    pool = []
+    for r in rows:
+        t = tags.get(r["id"], ())
+        # The same coverage filter the client applies. An album the lexicon
+        # barely knows derives a dead-centre vector and looks similar to
+        # everything; dropping it here keeps both engines choosing from the
+        # same catalog.
+        if engine.lexicon_coverage(t) < engine.MIN_COVERAGE:
+            continue
+        pool.append({
+            "id": r["id"],
+            "idBytes": r["id"].encode(),
+            "artistId": r["artist_id"],
+            "popularity": absolute_popularity(r["listener_count"]),
+            "quality": absolute_quality(r["listen_count"], r["listener_count"],
+                                        r["rating"], r["rating_votes"]),
+            "sv": engine.scaled_vector(engine.derive_vector(t, r["year_start"])),
+            "tagSet": engine.musical_tags(t),
+        })
+
+    tags.clear()
+    del rows
+    _POOL = pool
+    _POOL_BY_ID.clear()
+    _POOL_BY_ID.update({p["id"]: p for p in pool})
+
+
+def get_recs(conn, item_id: str, dial: float, limit: int) -> dict:
+    """
+    Two scored offers for one card, chosen from the whole catalog.
+
+    Phase 1 returned a candidate pool and let the client score it, which meant
+    the query had to guess what the scorer would want before the scorer had
+    seen anything. This removes the guess. The engine is a port of the client's
+    and is checked against it — api/parity-check.py requires the same albums in
+    the same roles for the same seeds at every dial setting, not merely similar
+    ones.
+    """
+    if not MBID.match(item_id):
+        return {"error": "bad id"}
+    if _POOL is None:
+        return {"error": "not ready"}
+    seed = _POOL_BY_ID.get(item_id)
+    if seed is None:
+        # Known to the catalog but not scorable — no art, no tags, or too
+        # little lexicon coverage to place on the axes.
+        row = conn.execute(f"{SELECT} WHERE i.id = ?", (item_id,)).fetchone()
+        return {"error": "not found"} if row is None else {"error": "not scorable"}
+
+    offers = engine.pick_branches(seed, _POOL, dial, {item_id})
+    # Re-queried rather than carried: three rows per request costs nothing,
+    # where holding every column of 89,000 albums in memory cost the machine.
+    wanted = [item_id] + [o["item"]["id"] for o in offers]
+    full = {i["id"]: i for i in get_items(conn, wanted)}
+    return {
+        "seed": full.get(item_id),
+        "offers": [{
+            "role": o["role"],
+            "distance": round(o["distance"], 6),
+            "score": o["score"],
+            "item": full.get(o["item"]["id"]),
+        } for o in offers if full.get(o["item"]["id"])],
+    }
+
+
+def get_random(conn, exclude: set[str], seed: str) -> dict | None:
+    """
+    One album at random from everything scorable.
+
+    The shuffle is the move the engine cannot make — a record chosen with the
+    rules switched off. Drawn from the client's bundle it was choosing from
+    11,476 of 100,931, which is the same rules by another name: the 88% least
+    likely to be bundled could never turn up. This draws from all of it.
+
+    Seeded from the card it was rolled on, so the same card offers the same
+    surprise. A shuffle that changes every render is not a door, it is a slot
+    machine, and stepping back would land somewhere new each time.
+    """
+    if _POOL is None:
+        return None
+    n = len(_POOL)
+    if not n:
+        return None
+    start = int(engine.hash01(f"wild:{seed}") * n)
+    for i in range(n):
+        cand = _POOL[(start + i) % n]
+        if cand["id"] not in exclude:
+            items = get_items(conn, [cand["id"]])
+            return items[0] if items else None
+    return None
 
 
 class Handler(BaseHTTPRequestHandler):

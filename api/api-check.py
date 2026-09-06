@@ -45,6 +45,20 @@ for q, artist in [("wilco", "Wilco"), ("joni mitchell", "Joni Mitchell"),
     top = items[0]["artistName"] if items else "(nothing)"
     check(f'search "{q}" finds {artist}', top == artist, f"top hit {top}")
 
+# Multi-word queries spanning title and artist — the most natural thing anyone
+# types, and the thing a broken FTS query fails at while single words still
+# work. A stale duplicate of this function shadowed the fixed one and every
+# search fell through to a substring scan, which cannot match words that live
+# in different columns.
+for q, artist, title in [("graceland paul simon", "Paul Simon", "Graceland"),
+                         ("boxer the national", "The National", "Boxer"),
+                         ("nevermind nirvana", "Nirvana", "Nevermind")]:
+    items = get("/v1/search", q=q, limit=3)["items"]
+    top = items[0] if items else {}
+    check(f'search "{q}" spans title and artist',
+          top.get("artistName") == artist and top.get("title") == title,
+          f"{top.get('artistName')} — {top.get('title')}" if items else "(nothing)")
+
 # Punctuation the FTS tokeniser splits: "U.S.A." must still be findable.
 items = get("/v1/search", q="born in the usa", limit=3)["items"]
 check("search survives punctuation", bool(items) and "Born in the U.S.A." in items[0]["title"],
