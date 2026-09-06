@@ -66,7 +66,15 @@ _token: dict = {"value": None, "expires": 0.0}
 # the commonly-cited ~180/minute. Running at 3/sec drew a 82,646-second ban —
 # 23 hours — so this is deliberately conservative. Throughput is not the
 # constraint that matters here; staying un-banned is.
-MIN_INTERVAL = 1.2
+# 2.0s, not 1.2.
+#
+# Two bans so far, of 23 and 16 hours, both while pacing well under Spotify's
+# documented limit — a development-mode app has a much smaller allowance than
+# the published figure, and the real constraint turned out to be total volume
+# rather than instantaneous rate. Grouping by artist cut the volume 2.7x;
+# halving the rate on top costs another nine hours of unattended running and
+# is worth it against losing a day to a third ban.
+MIN_INTERVAL = 2.0
 _last_call = [0.0]
 
 
@@ -112,6 +120,64 @@ def accepts(want_title: str, want_artist: str, got_title: str, got_artist: str) 
     return title_ok and artist_ok
 
 
+def artist_albums(artist: str) -> list[dict] | None:
+    """
+    Up to 50 of an artist's albums in one search.
+
+    The resolver used to search per album: 107,640 requests for this catalog,
+    which earned two rate-limit bans of 23 and 16 hours. Spotify's search takes
+    an artist-scoped query and returns a page of their albums, so the same work
+    costs 39,529 requests — 2.7x less — and the matching happens here rather
+    than being paid for in round trips.
+
+    Returns None on a transport failure, distinct from an empty list, which
+    means the artist genuinely has nothing.
+    """
+    q = f'artist:"{artist}"'
+    for attempt in range(4):
+        paced()
+        try:
+            r = requests.get(SEARCH_URL,
+                             params={"q": q, "type": "album", "limit": 50},
+                             headers={"Authorization": f"Bearer {token()}"}, timeout=25)
+        except requests.RequestException:
+            time.sleep(1 + attempt)
+            continue
+        if r.status_code == 429:
+            wait = int(r.headers.get("Retry-After", "2"))
+            if wait > LONG_BAN:
+                raise RateLimited(wait)
+            print(f"  rate limited, waiting {wait + 1}s", flush=True)
+            time.sleep(wait + 1)
+            continue
+        if r.status_code == 401:
+            _token["value"] = None
+            continue
+        if r.status_code != 200:
+            return None
+        return r.json().get("albums", {}).get("items", [])
+    return None
+
+
+def match_albums(wanted: list, candidates: list[dict], artist: str) -> dict[str, str]:
+    """
+    Pair our albums with Spotify's, by the same rules as before.
+
+    Matching locally rather than per request is the point of the rewrite, and
+    the acceptance test is unchanged: a title and an artist must both agree, so
+    a near-miss stays unresolved rather than sending someone to the wrong
+    record. A wrong link is worse than a search page.
+    """
+    out: dict[str, str] = {}
+    for row in wanted:
+        for a in candidates:
+            names = ", ".join(x["name"] for x in a.get("artists", []))
+            if accepts(row["title"], artist, a.get("name", ""), names):
+                out[row["id"]] = a["id"]
+                break
+    return out
+
+
 def resolve(title: str, artist: str) -> str | None:
     q = f'album:"{title}" artist:"{artist}"'
     for attempt in range(4):
@@ -149,37 +215,46 @@ def main() -> int:
     limit = int(sys.argv[1]) if len(sys.argv) > 1 else 5000
     conn = db.connect()
     db.init(conn)
-    todo = db.missing_spotify(conn, limit)
-    print(f"resolving {len(todo):,} albums", flush=True)
+    artists = db.missing_spotify_by_artist(conn, limit)
+    pending = sum(a["pending"] for a in artists)
+    print(f"resolving {pending:,} albums across {len(artists):,} artists "
+          f"({pending / max(1, len(artists)):.1f} per request)", flush=True)
 
-    hit = 0
-    start = time.time()
-    for n, row in enumerate(todo, 1):
-        # Resolve BEFORE touching the database, and commit immediately after.
-        #
-        # Batching commits held a write transaction open across the network
-        # call. When Spotify returned a long Retry-After the process slept
-        # inside that transaction, froze at 500 albums, and locked out every
-        # other writer — a stall that looked like SQLite contention but was
-        # really an HTTP backoff holding a lock it had no business holding.
+    hit = checked = 0
+    start_t = time.time()
+    for n, art in enumerate(artists, 1):
+        wanted = db.unresolved_for_artist(conn, art["artist_id"])
+        if not wanted:
+            continue
         try:
-            album_id = resolve(row["title"], row["artist"])
+            candidates = artist_albums(art["artist"])
         except RateLimited as e:
             print(f"\nstopping: {e}")
-            print(f"resolved {hit:,} before the limit; rerun after it lifts.")
+            print(f"resolved {hit:,} of {checked:,} checked; rerun after it lifts.")
             safe_commit(conn)
             return 2
-        db.set_spotify(conn, row["id"], album_id)
+
+        # A transport failure is not evidence about the album. Leave those
+        # unchecked so a later run retries them, rather than marking them
+        # resolved-to-nothing and never looking again.
+        if candidates is None:
+            continue
+
+        found = match_albums(wanted, candidates, art["artist"])
+        for row in wanted:
+            db.set_spotify(conn, row["id"], found.get(row["id"]))
+            checked += 1
+        hit += len(found)
         safe_commit(conn)
-        if album_id:
-            hit += 1
-        if n % 500 == 0:
-            rate = n / max(1e-6, time.time() - start)
-            print(f"  {n:,}/{len(todo):,} — {hit:,} matched "
-                  f"({100*hit/n:.0f}%, {rate:.1f}/sec)", flush=True)
+
+        if n % 200 == 0:
+            rate = n / max(1e-6, time.time() - start_t)
+            print(f"  {n:,}/{len(artists):,} artists — {hit:,}/{checked:,} albums matched "
+                  f"({100*hit/max(1,checked):.0f}%, {rate:.1f} artists/sec)", flush=True)
+
     safe_commit(conn)
     total = conn.execute("SELECT COUNT(*) FROM items WHERE spotify_id IS NOT NULL").fetchone()[0]
-    print(f"done: {hit:,}/{len(todo):,} matched; {total:,} albums now have a Spotify link")
+    print(f"done: {hit:,}/{checked:,} matched; {total:,} albums now have a Spotify link")
     return 0
 
 

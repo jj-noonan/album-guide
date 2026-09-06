@@ -527,6 +527,36 @@ def us_progress(conn: sqlite3.Connection) -> dict:
 # ── Spotify album resolution ───────────────────────────────────────────────
 
 
+def missing_spotify_by_artist(conn: sqlite3.Connection, limit: int) -> list[sqlite3.Row]:
+    """
+    Unresolved albums grouped by artist, most-listened artists first.
+
+    One Spotify search scoped to an artist returns up to 50 of their albums, so
+    resolving by artist asks for 2.7x less than resolving album by album —
+    107,640 requests against 39,529. That ratio is the whole reason this
+    exists: two rate-limit bans, of 23 and 16 hours, came from the volume
+    rather than the pace.
+
+    Ordered by the artist's best-known record, so a run cut short by a ban has
+    still covered what people are most likely to look for.
+    """
+    return list(conn.execute(
+        """SELECT a.id AS artist_id, a.name AS artist,
+                  MAX(i.listener_count) AS reach,
+                  COUNT(*) AS pending
+           FROM items i JOIN artists a ON a.id = i.artist_id
+           WHERE i.spotify_checked_at IS NULL
+           GROUP BY a.id
+           ORDER BY MAX(i.exported) DESC, reach DESC
+           LIMIT ?""", (limit,)))
+
+
+def unresolved_for_artist(conn: sqlite3.Connection, artist_id: str) -> list[sqlite3.Row]:
+    return list(conn.execute(
+        """SELECT id, title FROM items
+           WHERE artist_id = ? AND spotify_checked_at IS NULL""", (artist_id,)))
+
+
 def missing_spotify(conn: sqlite3.Connection, limit: int) -> list[sqlite3.Row]:
     """
     Albums with no Spotify lookup yet, deployed first then most-listened.
