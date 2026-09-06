@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sqlite3
 import sys
 import time
@@ -40,6 +41,64 @@ def art_path(url: str | None) -> str | None:
 
 
 PRIOR_RATING = 3.4  # catalog-wide expectation for an unrated record
+
+
+# Frozen, not measured. This was the catalog median devotion (7.85 plays per
+# listener over 78,250 albums) at the time the scale was fixed. It has to stay
+# a constant: recomputing it per export would make quality describe the
+# population again, which is the fault absolute scales exist to remove. If the
+# catalog's character shifts enough to make it wrong, change it deliberately
+# and re-sweep, rather than letting it drift a little on every export.
+PRIOR_DEVOTION = 7.85
+# Devotion deciles p10=3.05 and p90=21.2 mapped onto quality 2 and 8.
+QUALITY_SLOPE = 6.0 / (math.log10(21.2) - math.log10(3.05))
+QUALITY_INTERCEPT = 2.0 - QUALITY_SLOPE * math.log10(3.05)
+
+
+def absolute_quality(listens: int | None, listeners: int | None,
+                     rating: float | None, votes: int | None) -> float:
+    """
+    Devotion on a fixed 0-10 scale, independent of any population.
+
+    Devotion is plays per listener: it separates records people return to from
+    records people tried once. Saturating rather than linear because the
+    difference between 2 and 8 plays per listener says far more than the one
+    between 24 and 30, and anchored on a frozen prior so a given ratio always
+    scores the same. Shrunk toward that prior by listener count, because a
+    ratio measured over nine people is noise, not acclaim.
+
+    Shared with api/server.py; the two must agree exactly.
+    """
+    n = max(0, listeners or 0)
+    if n == 0:
+        # Unknown sits just below the middle: not rewarded like a loved record,
+        # not buried like a bad one.
+        return 4.5
+    plays = min(max(0, listens or 0), DEVOTION_CAP * n)
+    k = 80
+    devotion = (plays + PRIOR_DEVOTION * k) / (n + k)
+
+    votes = votes or 0
+    if rating is not None and votes >= 2:
+        adj = (rating * votes + PRIOR_RATING * 6) / (votes + 6)
+        devotion *= 1 + ((adj - PRIOR_RATING) / 5.0) * 1.2
+
+    # Log, then stretched onto 0-10 by fixed anchors.
+    #
+    # A saturating d/(d+prior) map was tried first and squeezed the whole
+    # catalog into 4.5-8.2 — a p10..p90 spread of 2.8 points where the old
+    # percentile spanned ten. Quality then barely moved the score at all, and
+    # the far-end quality check went from +2.3 above the catalog median to
+    # +0.2, which is the signal disappearing rather than the engine improving.
+    #
+    # The anchors are the catalog's own devotion deciles at the time the scale
+    # was frozen (p10 3.05, p90 21.2 plays per listener), mapped to 2 and 8.
+    # Fixed numbers, so a record's quality does not depend on what it was
+    # measured alongside.
+    if devotion <= 0:
+        return 0.0
+    q = QUALITY_SLOPE * math.log10(devotion) + QUALITY_INTERCEPT
+    return round(max(0.0, min(10.0, q)), 2)
 
 
 def absolute_popularity(listeners: int | None) -> float:
@@ -353,9 +412,12 @@ def export(conn: sqlite3.Connection, out: Path, limit: int | None = None) -> dic
     # here, in the export, in the API, and in a catalog ten times this size.
     # Log because reach is multiplicative — the interesting gap between 100 and
     # 1,000 listeners is the same size as the one between 10,000 and 100,000.
-    ranked_qual = percentile_rank({r["id"]: score[r["id"]][1] for r in rows})
     score = {
-        r["id"]: (absolute_popularity(r["listener_count"]), ranked_qual[r["id"]])
+        r["id"]: (
+            absolute_popularity(r["listener_count"]),
+            absolute_quality(r["listen_count"], r["listener_count"],
+                             r["rating"], r["rating_votes"]),
+        )
         for r in rows
     }
 
