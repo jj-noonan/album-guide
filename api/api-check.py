@@ -57,19 +57,24 @@ check("items by id round-trips", len(one) == 1 and one[0]["id"] == seed["id"])
 check("item carries tags", len(one[0]["tags"]) > 0, f"{len(one[0]['tags'])} tags")
 check("item carries art path", bool(one[0]["art"]), str(one[0]["art"]))
 
-# Recommendations: a pool, drawn near the dial's popularity target.
-near = get("/v1/recs", id=seed["id"], dial=0, limit=80)
-far = get("/v1/recs", id=seed["id"], dial=1, limit=80)
-check("recs returns a pool", len(near.get("candidates", [])) > 40,
-      f"{len(near.get('candidates', []))} candidates")
-check("recs echoes the seed", near.get("seed", {}).get("id") == seed["id"])
+# Recommendations: two scored offers, chosen over the whole catalog.
+near = get("/v1/recs", id=seed["id"], dial=0)
+far = get("/v1/recs", id=seed["id"], dial=1)
+check("recs returns two offers", len(near.get("offers", [])) == 2,
+      " | ".join(f"{o['role']}: {o['item']['artistName']} — {o['item']['title']}"
+                 for o in near.get("offers", [])))
+check("offers carry both roles",
+      {o["role"] for o in near.get("offers", [])} == {"deeper", "wider"})
+check("recs echoes the seed", (near.get("seed") or {}).get("id") == seed["id"])
+check("offers are complete enough to score from next",
+      all(o["item"].get("tags") and o["item"].get("art") for o in near.get("offers", [])))
 
 def med_listeners(payload):
-    xs = sorted(c["listenerCount"] or 0 for c in payload["candidates"])
+    xs = sorted((o["item"]["listenerCount"] or 0) for o in payload.get("offers", []))
     return xs[len(xs) // 2] if xs else 0
 
 n, f = med_listeners(near), med_listeners(far)
-check("the dial moves the pool", n > f * 2,
+check("the dial moves what is offered", n > f,
       f"near median {n:,} listeners vs far {f:,}")
 
 # Bad input must not 500.

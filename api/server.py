@@ -160,19 +160,40 @@ _POOL_BY_ID: dict[str, dict] = {}
 
 
 def build_pool(conn: sqlite3.Connection) -> None:
+    """
+    Load the scorable catalog into memory, as small as it will go.
+
+    The first attempt held 296 MB and was OOM-killed on a 256 MB machine. Three
+    things accounted for it, none of them the database — SQLite memory-maps
+    that and reads pages on demand.
+
+    The intermediate tag structures cost 109 MB and are only needed while
+    building, so they are dropped before serving. Each entry kept a full
+    sqlite3.Row of every column, when scoring needs six fields and the two
+    chosen albums can be re-queried by id. And each kept both the raw vector
+    and its scaled form, when only the scaled one is ever read.
+
+    Tag strings are interned: 356,000 tag rows draw on about 5,800 distinct
+    words, so without it the same word is stored thousands of times over.
+    """
     global _POOL
-    rows = conn.execute(f"{SELECT} WHERE {ELIGIBLE}").fetchall()
-    ids = [r["id"] for r in rows]
-    tags: dict[str, list] = {i: [] for i in ids}
-    for start in range(0, len(ids), 500):
-        chunk = ids[start:start + 500]
-        q = f"SELECT item_id, tag, count FROM item_tags WHERE item_id IN ({','.join('?' * len(chunk))})"
-        for t in conn.execute(q, chunk):
-            tags[t["item_id"]].append({"tag": t["tag"], "count": t["count"]})
+    rows = conn.execute(
+        """SELECT i.id, i.artist_id, i.year_start, i.listen_count,
+                  i.listener_count, i.rating, i.rating_votes
+           FROM items i
+           WHERE i.art_url IS NOT NULL
+             AND EXISTS (SELECT 1 FROM item_tags t WHERE t.item_id = i.id)"""
+    ).fetchall()
+
+    tags: dict[str, list] = {}
+    for t in conn.execute("SELECT item_id, tag, count FROM item_tags"):
+        tags.setdefault(t["item_id"], []).append(
+            {"tag": sys.intern(t["tag"]), "count": t["count"]}
+        )
 
     pool = []
     for r in rows:
-        t = tags.get(r["id"], [])
+        t = tags.get(r["id"], ())
         # The same coverage filter the client applies. An album the lexicon
         # barely knows derives a dead-centre vector and looks similar to
         # everything; dropping it here keeps both engines choosing from the
@@ -186,11 +207,12 @@ def build_pool(conn: sqlite3.Connection) -> None:
             "popularity": absolute_popularity(r["listener_count"]),
             "quality": absolute_quality(r["listen_count"], r["listener_count"],
                                         r["rating"], r["rating_votes"]),
-            "vector": engine.derive_vector(t, r["year_start"]),
             "sv": engine.scaled_vector(engine.derive_vector(t, r["year_start"])),
             "tagSet": engine.musical_tags(t),
-            "row": r,
         })
+
+    tags.clear()
+    del rows
     _POOL = pool
     _POOL_BY_ID.clear()
     _POOL_BY_ID.update({p["id"]: p for p in pool})
@@ -219,14 +241,18 @@ def get_recs(conn, item_id: str, dial: float, limit: int) -> dict:
         return {"error": "not found"} if row is None else {"error": "not scorable"}
 
     offers = engine.pick_branches(seed, _POOL, dial, {item_id})
+    # Re-queried rather than carried: three rows per request costs nothing,
+    # where holding every column of 89,000 albums in memory cost the machine.
+    wanted = [item_id] + [o["item"]["id"] for o in offers]
+    full = {i["id"]: i for i in get_items(conn, wanted)}
     return {
-        "seed": rows_to_items(conn, [seed["row"]])[0],
+        "seed": full.get(item_id),
         "offers": [{
             "role": o["role"],
             "distance": round(o["distance"], 6),
             "score": o["score"],
-            "item": rows_to_items(conn, [o["item"]["row"]])[0],
-        } for o in offers],
+            "item": full.get(o["item"]["id"]),
+        } for o in offers if full.get(o["item"]["id"])],
     }
 
 
