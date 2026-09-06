@@ -34,7 +34,7 @@ enough to shift the catalog's statistics:
 
 **4. Create the app** — this only registers the name, it does not deploy
 
-    fly launch --no-deploy --copy-config --name seebugbus-api --region iad
+    fly launch --no-deploy --copy-config --name album-guide-api --region iad
 
 If that name is taken, pick another and change `app` at the top of `fly.toml`
 to match. `--copy-config` makes it use the `fly.toml` already in the repo
@@ -50,11 +50,11 @@ builder. Later deploys reuse that layer unless the database changed.
 **Check it:**
 
     fly status
-    curl https://seebugbus-api.fly.dev/v1/health
+    curl https://album-guide-api.fly.dev/v1/health
 
 Expect `{"ok": true, "albums": 100931}`. Then a real query:
 
-    curl "https://seebugbus-api.fly.dev/v1/search?q=joni%20mitchell&limit=3"
+    curl "https://album-guide-api.fly.dev/v1/search?q=joni%20mitchell&limit=3"
 
 Joni Mitchell is a good test precisely because she has zero albums in the
 bundled catalog the site ships today. If she comes back, the API is serving

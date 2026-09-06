@@ -49,7 +49,7 @@ for (const m of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
  * render — the failure mode that matters, and the one a grep cannot see.
  */
 const dom = new JSDOM(html, {
-  url: 'https://jj-noonan.github.io/seebugbus/',
+  url: 'https://jj-noonan.github.io/album-guide/',
   pretendToBeVisual: true,
   runScripts: 'outside-only',
 });

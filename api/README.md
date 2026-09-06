@@ -1,4 +1,4 @@
-# seebugbus API
+# album.guide API
 
 Read-only HTTP access to the catalog, so the client stops carrying it.
 

@@ -3,7 +3,7 @@
 # `fly launch` rewrites this file and strips comments, so if you re-run it,
 # restore these. The values below are what it generated; the notes are why.
 
-app = 'seebugbus-api'
+app = 'album-guide-api'
 primary_region = 'iad'
 
 [build]

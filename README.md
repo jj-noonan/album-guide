@@ -39,7 +39,7 @@ switch that carries the joke.
 
 Static app on GitHub Pages, catalog on Turso (both free at this scale — see
 *Known gaps*). `vite.config.ts` uses `base: './'`, so the same build serves
-from `jj-noonan.github.io/seebugbus/` and from a custom domain with no rebuild.
+from `jj-noonan.github.io/album-guide/` and from a custom domain with no rebuild.
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and
 publishes to Pages.
