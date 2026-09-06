@@ -321,11 +321,23 @@ def pick_branches(
     if len(scored) < 2:
         return []
 
-    overlaps = sorted(s["overlap"] for s in scored)
-    median_ov = overlaps[len(overlaps) // 2]
+    # Mirrors the eligibility-then-split in src/engine/recommend.ts.
+    #
+    # Splitting the whole candidate set at its median overlap puts everything
+    # with any relation into "deeper" and leaves "wider" drawn entirely from
+    # records that share nothing — the median sits near zero because most of
+    # the catalog is unrelated to any given album. The floor decides who is
+    # eligible; the split happens inside that group.
+    wider_floor = lerp(TUNING["widerFloorNear"], TUNING["widerFloorFar"], dial)
+    eligible = [s for s in scored if s["overlap"] >= wider_floor]
+    if len(eligible) < 4:
+        eligible = scored
 
-    closer = [s for s in scored if s["overlap"] > median_ov]
-    further = [s for s in scored if s["overlap"] <= median_ov]
+    ovs = sorted(s["overlap"] for s in eligible)
+    median_ov = ovs[len(ovs) // 2]
+
+    closer = [s for s in eligible if s["overlap"] > median_ov]
+    further = [s for s in eligible if s["overlap"] <= median_ov]
 
     by_score = lambda s: -s["score"]  # noqa: E731
     pool_size = TUNING["poolSize"]

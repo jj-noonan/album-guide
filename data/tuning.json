@@ -9,6 +9,8 @@
  "qualityWeightNear": 0.28,
  "qualityWeightFar": 0.55,
  "idiomWeight": 0.65,
+ "widerFloorNear": 0.15,
+ "widerFloorFar": 0,
  "evidenceFull": 24,
  "mode": "texture",
  "idiomNear": 0.85,

@@ -109,6 +109,28 @@ export const TUNING = {
    * unrelated genres reading as a good recommendation.
    */
   idiomWeight: 0.65,
+
+  /*
+   * The least vocabulary a "wider" offer may share, relaxing as the dial opens.
+   *
+   * Measured, wider sat at ~0.05 overlap at every dial setting while deeper
+   * fell from 0.49 to 0.16 — so the dial moved distance and never relatedness,
+   * and the wide door was equally unrelated on the Sidewalk as in the
+   * Bushwhack. That is how Radiohead came to offer Slayer one notch from home.
+   *
+   * The exact value matters less than it looks. Overlap is bimodal: a
+   * candidate either shares nothing (0 to 0.07) or shares a good deal (0.40
+   * up), because the evidence shrink pulls unshared pairs toward zero. Every
+   * floor between 0.10 and 0.40 selects the same 2.9% of candidates, so this
+   * is closer to a switch than a threshold — 0.15 sits in the middle of that
+   * dead zone rather than on either edge of it.
+   *
+   * Zero at the far end on purpose. Bushwhack is where the engine is supposed
+   * to hand over a record with nothing in common, and a floor there would
+   * quietly delete the setting the whole app is built around.
+   */
+  widerFloorNear: 0.15,
+  widerFloorFar: 0.0,
   /**
    * Idf mass at which a tag overlap is trusted outright — about three
    * averagely-informative tags. Lives here so the sweep can reach it; it was
@@ -486,15 +508,44 @@ export function pickBranches(
    * construction: "deeper" is always the more idiomatically related half of
    * what is genuinely nearby, "wider" the less related half.
    */
+  /*
+   * Both doors are drawn from the records that share some vocabulary, and how
+   * much "some" means relaxes as the dial opens.
+   *
+   * Splitting the whole candidate set at its median overlap does not work,
+   * which is only obvious once measured: most of the catalog shares nothing
+   * with any given record, so the median sits near zero, everything with any
+   * overlap lands in "deeper", and "wider" is drawn entirely from records with
+   * no relation at all. Measured, wider sat at ~0.05 overlap at every dial
+   * setting while deeper fell from 0.49 to 0.16 — the dial moved distance and
+   * never relatedness, which is how Radiohead came to offer Slayer one step
+   * from home.
+   *
+   * So the floor selects who is eligible at all, and the split happens inside
+   * that group: deeper is its more related half, wider its less related half.
+   * At the far end the floor is zero, the group is everything, and this is
+   * exactly the old behaviour.
+   */
+  const widerFloor = lerp(TUNING.widerFloorNear, TUNING.widerFloorFar, dial);
   const overlaps = scored.map((s) => idiomOverlap(current, s.item));
-  const sortedOv = [...overlaps].sort((x, y) => x - y);
+
+  let eligible = scored.filter((_, i) => overlaps[i] >= widerFloor);
+  let eligibleOv = overlaps.filter((o) => o >= widerFloor);
+  if (eligible.length < 4) {
+    // Some records share their vocabulary with almost nothing. Two unrelated
+    // offers beat no offers.
+    eligible = scored;
+    eligibleOv = overlaps;
+  }
+
+  const sortedOv = [...eligibleOv].sort((x, y) => x - y);
   const medianOv = sortedOv[Math.floor(sortedOv.length / 2)] ?? 0;
 
   const byScore = (a: Scored, b: Scored) => b.score - a.score;
   const closer: Scored[] = [];
   const further: Scored[] = [];
-  scored.forEach((s, i) => {
-    (overlaps[i] > medianOv ? closer : further).push(s);
+  eligible.forEach((s, i) => {
+    (eligibleOv[i] > medianOv ? closer : further).push(s);
   });
 
   const deeperPool = closer.sort(byScore).slice(0, TUNING.poolSize);
