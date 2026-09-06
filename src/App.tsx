@@ -14,7 +14,13 @@ import { SearchBox } from './components/SearchBox';
 import { Die, ROLL_MS } from './components/Die';
 import { About } from './components/About';
 import { Feedback } from './components/Feedback';
-import { apiConfigured, fetchOffers, type ApiOffer } from './data/api';
+import {
+  apiConfigured,
+  cachedOffers,
+  loadOffers,
+  prefetchOffers,
+  type ApiOffer,
+} from './data/api';
 import {
   weights as feedbackWeights,
   verdictFor,
@@ -199,13 +205,38 @@ export default function App() {
       setApiOffers(null);
       return;
     }
+    /*
+     * Cached first, and synchronously.
+     *
+     * Clearing to null and re-fetching on every card meant the listener saw
+     * locally scored offers, then watched both cards change about a second
+     * later when the server's arrived — the target moving under the cursor of
+     * anyone who was already reaching for it. After the first card the answer
+     * is usually already here, because the previous card prefetched it.
+     */
+    const hit = cachedOffers(current.id, dial);
+    setApiOffers(hit ?? null);
+    if (hit) return;
+
     let live = true;
-    setApiOffers(null);
-    void fetchOffers(current.id, dial).then((offers) => {
-      if (live) setApiOffers(offers);
+    void loadOffers(current.id, dial).then((offers) => {
+      if (live && offers) setApiOffers(offers);
     });
     return () => { live = false; };
   }, [current, dial]);
+
+  /*
+   * Warm the two cards one click away.
+   *
+   * A second is tolerable once and grating at every step. Fetching ahead while
+   * this card is being looked at is what makes the rest of the walk feel
+   * immediate; it costs two requests the listener may not use, against a
+   * machine that sleeps when idle anyway.
+   */
+  useEffect(() => {
+    if (!apiOffers?.length) return;
+    prefetchOffers(apiOffers.map((o) => o.item.id), dial);
+  }, [apiOffers, dial]);
 
   const branches = useMemo<Branch[]>(() => {
     if (!current) return [];

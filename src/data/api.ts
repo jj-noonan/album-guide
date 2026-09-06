@@ -87,6 +87,64 @@ export async function fetchOffers(
   }));
 }
 
+/*
+ * Offers already fetched, keyed by card and dial.
+ *
+ * Module-level rather than React state on purpose: it survives re-renders and
+ * is read during render by the card that needs it, so a card whose offers have
+ * already arrived shows them immediately instead of showing local ones and
+ * swapping a second later.
+ */
+const offerCache = new Map<string, ApiOffer[]>();
+const inFlight = new Set<string>();
+const key = (id: string, dial: number) => `${id}|${dial.toFixed(2)}`;
+
+/** Offers already in hand for this card, if any. */
+export function cachedOffers(id: string, dial: number): ApiOffer[] | undefined {
+  return offerCache.get(key(id, dial));
+}
+
+/**
+ * Fetch offers and remember them.
+ *
+ * Deduplicated: landing on a card triggers a fetch for it and, once that
+ * lands, prefetches for both of its offers — so the same card is often asked
+ * for twice within a second.
+ */
+export async function loadOffers(id: string, dial: number): Promise<ApiOffer[] | null> {
+  const k = key(id, dial);
+  const hit = offerCache.get(k);
+  if (hit) return hit;
+  if (inFlight.has(k)) return null;
+  inFlight.add(k);
+  try {
+    const offers = await fetchOffers(id, dial);
+    if (offers) {
+      // Bounded: a long session would otherwise keep every card ever seen.
+      if (offerCache.size > 240) offerCache.clear();
+      offerCache.set(k, offers);
+    }
+    return offers;
+  } finally {
+    inFlight.delete(k);
+  }
+}
+
+/**
+ * Warm the cache for cards the listener can reach in one click.
+ *
+ * The server takes about a second, which is fine to wait for once and
+ * irritating to wait for at every step. Fetching the next two while the
+ * current card is being looked at means the swap happens on the first card
+ * only; after that, choosing an offer shows server-scored offers immediately.
+ */
+export function prefetchOffers(ids: string[], dial: number): void {
+  if (!apiConfigured()) return;
+  for (const id of ids) {
+    if (!offerCache.has(key(id, dial))) void loadOffers(id, dial);
+  }
+}
+
 export async function searchApi(q: string, limit = 12): Promise<Item[]> {
   const out = await get<{ items: RawAlbum[] }>(
     `/v1/search?q=${encodeURIComponent(q)}&limit=${limit}`,
