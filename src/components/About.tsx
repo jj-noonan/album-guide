@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { STOPS } from './DistanceDial';
 import './About.css';
 
-/** What this thing is and how to drive it. */
+/** What this thing is and how to travel it. */
 interface Props {
   onClose: () => void;
   /** Reachable from here now that the header carries no reset button. */
@@ -33,7 +33,7 @@ export function About({ onClose, onRestart }: Props) {
 
         <p className="about__lede">
           Streaming recommendations circle the densest corner of your taste and
-          hand back the same well-known neighbours. This drives somewhere instead.
+          hand back the same well-known neighbours. This goes somewhere instead.
         </p>
 
         <section>

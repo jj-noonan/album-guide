@@ -455,11 +455,17 @@ export default function App() {
           A route through the albums you haven&rsquo;t <em>found</em> yet
         </p>
         <div style={{ fontSize: 12, opacity: 0.6 }}>
-          {catalogSize.toLocaleString()} albums aboard ·{' '}
-          {CATALOG_STATS.corridorsComplete.length} of 11 routes mapped
+          {/*
+            * Was "N of 11 routes mapped", counting corridors. Corridors stopped
+            * deciding anything when the roles moved to tag overlap, so it was
+            * reporting crawler bookkeeping as though it were a feature of the
+            * map. Artists is a number that still means what it says.
+            */}
+          {catalogSize.toLocaleString()} albums ·{' '}
+          {CATALOG_STATS.artists.toLocaleString()} artists
         </div>
         <button className="play" onClick={restart} disabled={!catalogSize}>
-          {catalogSize ? 'Start driving' : 'Waiting for the crawler…'}
+          {catalogSize ? 'Set off' : 'Waiting for the crawler…'}
         </button>
       </div>
     );
@@ -472,7 +478,7 @@ export default function App() {
           <button
             className="brand"
             onClick={() => setShowAbout(true)}
-            title="What this is, and how to drive it"
+            title="What this is, and how to travel it"
           >
             <img className="brand__mark" src="./svg/icon-lg-reversed.svg" alt="album.guide" width={64} height={64} />
             <span className="brand__word">
