@@ -1,6 +1,6 @@
 {
   "note": "Evaluation seeds. See scripts/seeds.py for how batches and rotation work.",
-  "heldOutBatch": 1,
+  "heldOutBatch": 2,
   "batches": {
     "0": {
       "crawledFrom": true,
@@ -76,7 +76,7 @@
       ]
     },
     "1": {
-      "crawledFrom": false,
+      "crawledFrom": true,
       "artists": [
         "The Velvet Underground",
         "Joni Mitchell",
