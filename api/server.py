@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import sqlite3
@@ -34,6 +35,18 @@ def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(f"file:{DB}?mode=ro", uri=True, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def absolute_popularity(listeners: int | None) -> float:
+    """
+    Listeners on a fixed 0-10 scale, independent of any population.
+
+    Must match scripts/export_catalog.py exactly. A percentile would not: this
+    server ranks over 100,931 albums and the client ships 12,000, so the same
+    album would score differently either side of the wire and the engine's
+    popularity target would quietly mean two things at once.
+    """
+    return round(min(10.0, 2.0 * math.log10(1.0 + max(0, listeners or 0))), 2)
 
 
 def art_path(url: str | None) -> str | None:
@@ -62,6 +75,7 @@ def rows_to_items(conn: sqlite3.Connection, rows: list[sqlite3.Row]) -> list[dic
         "art": art_path(r["art_url"]), "tags": tags.get(r["id"], []),
         "corridorIds": [],
         "listenCount": r["listen_count"], "listenerCount": r["listener_count"],
+        "popularity": absolute_popularity(r["listener_count"]),
         "country": r["artist_country"], "rating": r["rating"],
         "spotifyId": r["spotify_id"],
     } for r in rows]

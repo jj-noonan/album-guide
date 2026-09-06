@@ -42,6 +42,17 @@ def art_path(url: str | None) -> str | None:
 PRIOR_RATING = 3.4  # catalog-wide expectation for an unrated record
 
 
+def absolute_popularity(listeners: int | None) -> float:
+    """
+    Listeners on a fixed 0-10 scale, independent of any population.
+
+    Shared with the API in api/server.py; the two must agree exactly or the
+    engine's popularity targets mean different things either side of the wire.
+    """
+    import math
+    return round(min(10.0, 2.0 * math.log10(1.0 + max(0, listeners or 0))), 2)
+
+
 def percentile_rank(raw: dict[str, float]) -> dict[str, float]:
     """Map values to 0..10 by rank. Negatives mean "unknown" and stay at 0."""
     known = sorted((v, k) for k, v in raw.items() if v >= 0)
@@ -327,11 +338,26 @@ def export(conn: sqlite3.Connection, out: Path, limit: int | None = None) -> dic
     #
     # Selection uses database ranks; the shipped numbers are ranks within the
     # shipped set, so 0..10 spans the catalog the engine can actually see.
-    export_pop = {r["id"]: float(r["listener_count"] or -1) for r in rows}
-    export_qual = {r["id"]: score[r["id"]][1] for r in rows}
-    ranked_pop = percentile_rank(export_pop)
-    ranked_qual = percentile_rank(export_qual)
-    score = {k: (ranked_pop[k], ranked_qual[k]) for k in keep}
+    # Popularity is absolute, not a rank.
+    #
+    # It was a percentile, and a percentile describes a population rather than
+    # a record: the same album scored differently depending on what it was
+    # exported alongside. Ranking over the database put 24% of shipped albums
+    # in one bucket spanning 786 to 10,711 listeners; ranking over the export
+    # fixed that and created a subtler version of the same problem, because the
+    # API serves 100,931 albums and the client ships 12,000, so "popularity
+    # 9.8" meant ~12,000 listeners to one and ~620 to the other. Every fix that
+    # keeps percentiles just moves which population it is wrong about.
+    #
+    # 2*log10(1+listeners) is stable by construction. 1,000 listeners is 6.0
+    # here, in the export, in the API, and in a catalog ten times this size.
+    # Log because reach is multiplicative — the interesting gap between 100 and
+    # 1,000 listeners is the same size as the one between 10,000 and 100,000.
+    ranked_qual = percentile_rank({r["id"]: score[r["id"]][1] for r in rows})
+    score = {
+        r["id"]: (absolute_popularity(r["listener_count"]), ranked_qual[r["id"]])
+        for r in rows
+    }
 
     tags: dict[str, list] = defaultdict(list)
     for r in conn.execute("SELECT item_id, tag, count FROM item_tags"):

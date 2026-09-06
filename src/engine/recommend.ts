@@ -81,7 +81,7 @@ export const TUNING = {
    * the point of the dial.
    */
   popularityFar: 3.0,
-  popularitySigma: 2.7,
+  popularitySigma: 3.5,
 
   /**
    * How hard quality is weighted, near and far.
