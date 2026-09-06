@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import random
 from pathlib import Path
 from typing import Any
@@ -89,9 +90,15 @@ def lexicon_coverage(tags: list[dict]) -> float:
         return 0.0
     known = total = 0.0
     for t in tags:
+        name = str(t.get("tag", "")).lower().strip()
+        # Bookkeeping does not count against knowing the music. Mirrors
+        # lexiconCoverage in src/data/lexicon.ts; if the two disagree the two
+        # engines score different catalogs.
+        if name in NON_MUSICAL or _non_musical_re(name):
+            continue
         w = math.sqrt(max(1, t.get("count") or 1))
         total += w
-        if TAG_LEXICON.get(str(t.get("tag", "")).lower().strip()):
+        if TAG_LEXICON.get(name):
             known += w
     return known / total if total > 0 else 0.0
 
@@ -150,9 +157,18 @@ def musical_tags(tags: list[dict]) -> set[str]:
     return out
 
 
+# Must match NON_MUSICAL_RE in src/data/catalog.ts exactly, including being a
+# search rather than a match: the TypeScript uses .test(), which is unanchored,
+# so re.match here silently kept tags the client dropped — "5+ wochen" among
+# them — and the two engines were filtering different catalogs.
+_NON_MUSICAL_RE = re.compile(
+    r"^\d{4}$|charts?$|^jahrescharts|^offizielle|^top \d+$|wochen$|^\d+[–-]\d+\s",
+    re.I,
+)
+
+
 def _non_musical_re(tag: str) -> bool:
-    import re
-    return bool(re.match(r"^\d{4}$|charts?$|^jahrescharts|^offizielle|^top \d+$", tag, re.I))
+    return bool(_NON_MUSICAL_RE.search(tag))
 
 
 def idiom_overlap(a_tags: set[str], b_tags: set[str]) -> float:

@@ -862,6 +862,166 @@
    "abstract": 0.95,
    "voice": 0.3
   },
+  "hip-hop": {
+   "energy": 0.62,
+   "density": 0.66,
+   "brightness": 0.45,
+   "synthetic": 0.62,
+   "abstract": 0.35,
+   "voice": 0.88
+  },
+  "rap": {
+   "energy": 0.66,
+   "density": 0.64,
+   "brightness": 0.45,
+   "synthetic": 0.6,
+   "abstract": 0.3,
+   "voice": 0.92
+  },
+  "hip hop rap": {
+   "energy": 0.64,
+   "density": 0.65,
+   "brightness": 0.45,
+   "synthetic": 0.61,
+   "abstract": 0.32,
+   "voice": 0.9
+  },
+  "pop rap": {
+   "energy": 0.66,
+   "density": 0.6,
+   "brightness": 0.62,
+   "synthetic": 0.7,
+   "abstract": 0.2,
+   "voice": 0.9
+  },
+  "gangsta rap": {
+   "energy": 0.7,
+   "density": 0.66,
+   "brightness": 0.32,
+   "synthetic": 0.58,
+   "abstract": 0.25,
+   "voice": 0.92
+  },
+  "hardcore hip hop": {
+   "energy": 0.8,
+   "density": 0.72,
+   "brightness": 0.3,
+   "synthetic": 0.55,
+   "abstract": 0.35,
+   "voice": 0.9
+  },
+  "hardcore rap": {
+   "energy": 0.8,
+   "density": 0.72,
+   "brightness": 0.3,
+   "synthetic": 0.55,
+   "abstract": 0.34,
+   "voice": 0.9
+  },
+  "conscious hip hop": {
+   "energy": 0.55,
+   "density": 0.62,
+   "brightness": 0.45,
+   "synthetic": 0.5,
+   "abstract": 0.45,
+   "voice": 0.9
+  },
+  "east coast hip hop": {
+   "energy": 0.65,
+   "density": 0.7,
+   "brightness": 0.38,
+   "synthetic": 0.5,
+   "abstract": 0.38,
+   "voice": 0.9
+  },
+  "east coast rap": {
+   "energy": 0.65,
+   "density": 0.7,
+   "brightness": 0.38,
+   "synthetic": 0.5,
+   "abstract": 0.38,
+   "voice": 0.9
+  },
+  "west coast hip hop": {
+   "energy": 0.62,
+   "density": 0.6,
+   "brightness": 0.5,
+   "synthetic": 0.6,
+   "abstract": 0.28,
+   "voice": 0.9
+  },
+  "west coast rap": {
+   "energy": 0.62,
+   "density": 0.6,
+   "brightness": 0.5,
+   "synthetic": 0.6,
+   "abstract": 0.28,
+   "voice": 0.9
+  },
+  "southern hip hop": {
+   "energy": 0.7,
+   "density": 0.62,
+   "brightness": 0.48,
+   "synthetic": 0.68,
+   "abstract": 0.25,
+   "voice": 0.9
+  },
+  "abstract hip hop": {
+   "energy": 0.48,
+   "density": 0.6,
+   "brightness": 0.42,
+   "synthetic": 0.62,
+   "abstract": 0.72,
+   "voice": 0.78
+  },
+  "r&b": {
+   "energy": 0.45,
+   "density": 0.52,
+   "brightness": 0.6,
+   "synthetic": 0.5,
+   "abstract": 0.22,
+   "voice": 0.92
+  },
+  "contemporary r&b": {
+   "energy": 0.45,
+   "density": 0.54,
+   "brightness": 0.62,
+   "synthetic": 0.68,
+   "abstract": 0.2,
+   "voice": 0.92
+  },
+  "rhythm and blues": {
+   "energy": 0.5,
+   "density": 0.5,
+   "brightness": 0.58,
+   "synthetic": 0.25,
+   "abstract": 0.2,
+   "voice": 0.9
+  },
+  "neo soul": {
+   "energy": 0.4,
+   "density": 0.55,
+   "brightness": 0.55,
+   "synthetic": 0.42,
+   "abstract": 0.35,
+   "voice": 0.9
+  },
+  "alternative r&b": {
+   "energy": 0.4,
+   "density": 0.55,
+   "brightness": 0.48,
+   "synthetic": 0.66,
+   "abstract": 0.45,
+   "voice": 0.88
+  },
+  "vocal jazz": {
+   "energy": 0.32,
+   "density": 0.42,
+   "brightness": 0.6,
+   "synthetic": 0.12,
+   "abstract": 0.3,
+   "voice": 0.95
+  },
   "hip hop": {
    "energy": 0.62,
    "density": 0.55,

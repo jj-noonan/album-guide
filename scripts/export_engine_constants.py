@@ -42,8 +42,10 @@ NON_MUSICAL = [
     "finnish", "polish", "russian", "italian", "spanish", "dutch", "danish",
     "belgian", "irish", "scottish", "américain", "britannique", "allemand",
     "seen live", "favourites", "favorites", "owned", "vinyl", "spotify",
+    "plattentests.de", "laut.de", "ph_temp_checken", "urban", "rhythmic",
 ]
-NON_MUSICAL_RE = re.compile(r"^\d{4}$|charts?$|^jahrescharts|^offizielle|^top \d+$", re.I)
+NON_MUSICAL_RE = re.compile(
+    r"^\d{4}$|charts?$|^jahrescharts|^offizielle|^top \d+$|wochen$|^\d+[–-]\d+\s", re.I)
 
 
 def musical(tag: str) -> bool:

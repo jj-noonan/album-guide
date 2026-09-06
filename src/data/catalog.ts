@@ -80,6 +80,39 @@ function deriveObscurity(albums: RawAlbum[]): Map<string, number> {
 }
 
 /**
+ * Tags that describe cataloguing rather than music.
+ *
+ * Weighting by rarity assumes a rare tag is an informative one. That holds for
+ * genre words and fails for bookkeeping: "usa" scores idf 5.50 and "1994"
+ * 6.87, both above "grunge" at 4.90, so two records sharing nothing but a
+ * country of origin looked more alike than two grunge albums. Only 0.9% of tag
+ * applications today, but crawling keeps finding chart listings, and the ones
+ * it finds are rare by construction and therefore expensive.
+ *
+ * Deliberately narrow: nationalities, bare years, chart furniture and
+ * collection habits. Anything that names how a record sounds stays, including
+ * scene tags like "new york hardcore" where the place is part of the idiom.
+ */
+const NON_MUSICAL = new Set([
+  'american', 'usa', 'us', 'british', 'uk', 'english', 'german', 'deutsch',
+  'french', 'japanese', 'canadian', 'swedish', 'australian', 'norwegian',
+  'finnish', 'polish', 'russian', 'italian', 'spanish', 'dutch', 'danish',
+  'belgian', 'irish', 'scottish', 'américain', 'britannique', 'allemand',
+  'seen live', 'favourites', 'favorites', 'owned', 'vinyl', 'spotify',
+  // Review sites and chart-duration tags, found while working out why the
+  // most-listened hip hop albums were being dropped from scoring entirely.
+  'plattentests.de', 'laut.de', 'ph_temp_checken', 'urban', 'rhythmic',
+]);
+
+/** Bare years, and chart-listing tags in any language we have seen. */
+const NON_MUSICAL_RE =
+  /^\d{4}$|charts?$|^jahrescharts|^offizielle|^top \d+$|wochen$|^\d+[–-]\d+\s/i;
+
+export const isMusicalTag = (tag: string): boolean =>
+  !NON_MUSICAL.has(tag) && !NON_MUSICAL_RE.test(tag);
+
+
+/**
  * Build a live Item from a raw record. Shared by the bundled catalog and by
  * albums ingested at runtime, so a searched-for record behaves identically to
  * a crawled one — same axes, same links, same card.
@@ -129,7 +162,7 @@ function build(): { items: Item[]; artists: Map<string, Artist> } {
     // Records whose tags we barely recognise get placed at the middle of every
     // axis, which makes them look deceptively similar to everything. Drop them
     // rather than let them pollute the branch offers.
-    .filter((item) => lexiconCoverage(item.tags) >= 0.3);
+    .filter((item) => lexiconCoverage(item.tags, isMusicalTag) >= 0.3);
 
   return { items, artists };
 }
@@ -164,34 +197,6 @@ export const AXIS_SD: Record<Axis, number> = (() => {
   for (const axis of AXES) out[axis] = CONSTANTS.axisSd[axis] ?? 1;
   return out;
 })();
-
-/**
- * Tags that describe cataloguing rather than music.
- *
- * Weighting by rarity assumes a rare tag is an informative one. That holds for
- * genre words and fails for bookkeeping: "usa" scores idf 5.50 and "1994"
- * 6.87, both above "grunge" at 4.90, so two records sharing nothing but a
- * country of origin looked more alike than two grunge albums. Only 0.9% of tag
- * applications today, but crawling keeps finding chart listings, and the ones
- * it finds are rare by construction and therefore expensive.
- *
- * Deliberately narrow: nationalities, bare years, chart furniture and
- * collection habits. Anything that names how a record sounds stays, including
- * scene tags like "new york hardcore" where the place is part of the idiom.
- */
-const NON_MUSICAL = new Set([
-  'american', 'usa', 'us', 'british', 'uk', 'english', 'german', 'deutsch',
-  'french', 'japanese', 'canadian', 'swedish', 'australian', 'norwegian',
-  'finnish', 'polish', 'russian', 'italian', 'spanish', 'dutch', 'danish',
-  'belgian', 'irish', 'scottish', 'américain', 'britannique', 'allemand',
-  'seen live', 'favourites', 'favorites', 'owned', 'vinyl', 'spotify',
-]);
-
-/** Bare years, and chart-listing tags in any language we have seen. */
-const NON_MUSICAL_RE = /^\d{4}$|charts?$|^jahrescharts|^offizielle|^top \d+$/i;
-
-export const isMusicalTag = (tag: string): boolean =>
-  !NON_MUSICAL.has(tag) && !NON_MUSICAL_RE.test(tag);
 
 /** Tag sets, for measuring idiom overlap without rebuilding them per query. */
 export const TAG_SETS: Map<string, Set<string>> = new Map(
