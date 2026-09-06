@@ -1,0 +1,6 @@
+# The build needs the server and the API database. Everything else — the 143 MB
+# crawl database, node_modules, the site build — would be uploaded on every
+# deploy for nothing.
+*
+!api/server.py
+!data/catalog-api.sqlite

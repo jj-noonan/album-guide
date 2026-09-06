@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -237,15 +238,19 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--port", type=int, default=8787)
+    ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", 8787)))
+    # Containers need 0.0.0.0. Bound to localhost a Fly machine passes its own
+    # health check and refuses every request from outside it, which presents as
+    # a deploy that "worked" and a URL that times out.
+    ap.add_argument("--host", default=os.environ.get("HOST", "127.0.0.1"))
     args = ap.parse_args()
     if not DB.exists():
         print(f"no {DB} — run api/make-api-db.py first", file=sys.stderr)
         return 1
     Handler.conn = connect()
-    srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    srv = ThreadingHTTPServer((args.host, args.port), Handler)
     n = Handler.conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
-    print(f"serving {n:,} albums on http://127.0.0.1:{args.port}", flush=True)
+    print(f"serving {n:,} albums on http://{args.host}:{args.port}", flush=True)
     srv.serve_forever()
     return 0
 
