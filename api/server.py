@@ -143,7 +143,7 @@ def build_pool(conn: sqlite3.Connection) -> None:
         # barely knows derives a dead-centre vector and looks similar to
         # everything; dropping it here keeps both engines choosing from the
         # same catalog.
-        if engine.lexicon_coverage(t) < engine.MIN_COVERAGE:
+        if not engine.placeable(t):
             continue
         pool.append({
             "id": r["id"],
@@ -392,7 +392,7 @@ def build_pool(conn: sqlite3.Connection) -> None:
         # barely knows derives a dead-centre vector and looks similar to
         # everything; dropping it here keeps both engines choosing from the
         # same catalog.
-        if engine.lexicon_coverage(t) < engine.MIN_COVERAGE:
+        if not engine.placeable(t):
             continue
         pool.append({
             "id": r["id"],

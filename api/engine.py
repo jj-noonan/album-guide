@@ -109,6 +109,28 @@ def lexicon_coverage(tags: list[dict]) -> float:
 # offers. The server has to drop the same ones or the two engines are choosing
 # from different catalogs and no comparison between them means anything.
 MIN_COVERAGE = 0.3
+# Enough understood vocabulary to place a record regardless of share. Mirrors
+# the filter in src/data/catalog.ts; if the two disagree the two engines score
+# different catalogs, which parity cannot catch because it compares scores on a
+# pool it is handed.
+MIN_KNOWN_WEIGHT = 2.0
+
+
+def known_weight(tags: list[dict]) -> float:
+    """Absolute weight of tags the lexicon understands."""
+    w = 0.0
+    for t in tags:
+        name = str(t.get("tag", "")).lower().strip()
+        if name in NON_MUSICAL or _non_musical_re(name):
+            continue
+        if TAG_LEXICON.get(name):
+            w += math.sqrt(max(1, t.get("count") or 1))
+    return w
+
+
+def placeable(tags: list[dict]) -> bool:
+    """Can the engine put this record on the axes at all?"""
+    return lexicon_coverage(tags) >= MIN_COVERAGE or known_weight(tags) >= MIN_KNOWN_WEIGHT
 
 
 def distance(a: dict[str, float], b: dict[str, float]) -> float:

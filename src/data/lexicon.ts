@@ -337,6 +337,32 @@ export function deriveVector(tags: ItemTag[], year: number | null): Vector {
   return vector;
 }
 
+/**
+ * Absolute weight of the tags the lexicon understands.
+ *
+ * The companion to coverage, and the answer to a way coverage is inverted.
+ * Coverage asks what *share* of a record's tags are understood, which
+ * punishes a thoroughly tagged album: To Pimp a Butterfly carries five genre
+ * terms this lexicon knows — hip-hop, jazz rap, conscious hip hop, funk — and
+ * scored 0.21 because seventy mood tags sat beside them. Nevermind carries the
+ * single word "rock" and scored 1.00. We understand the first far better and
+ * were rejecting it while admitting the second.
+ *
+ * So placement asks both: a good share, or enough known vocabulary outright.
+ */
+export function lexiconKnownWeight(
+  tags: ItemTag[],
+  isMusical?: (t: string) => boolean,
+): number {
+  let known = 0;
+  for (const { tag, count } of tags) {
+    const name = tag.toLowerCase().trim();
+    if (isMusical && !isMusical(name)) continue;
+    if (TAG_LEXICON[name]) known += Math.sqrt(Math.max(1, count));
+  }
+  return known;
+}
+
 /** How much of an item's tag weight we actually recognise. Low = weak signal. */
 export function lexiconCoverage(tags: ItemTag[], isMusical?: (t: string) => boolean): number {
   if (tags.length === 0) return 0;

@@ -1,6 +1,6 @@
 import CONSTANTS from './engine-constants.json';
 import rawCatalog from './catalog.json';
-import { deriveVector, lexiconCoverage } from './lexicon';
+import { deriveVector, lexiconCoverage, lexiconKnownWeight } from './lexicon';
 import { AXES, type Artist, type Axis, type Item, type RawAlbum, type RawCatalog } from './schema';
 
 const raw: RawCatalog = rawCatalog;
@@ -162,7 +162,19 @@ function build(): { items: Item[]; artists: Map<string, Artist> } {
     // Records whose tags we barely recognise get placed at the middle of every
     // axis, which makes them look deceptively similar to everything. Drop them
     // rather than let them pollute the branch offers.
-    .filter((item) => lexiconCoverage(item.tags, isMusicalTag) >= 0.3);
+    /*
+     * Placeable if either measure says so.
+     *
+     * A high share means most of what we were told, we understood. Enough
+     * known weight means we understood a lot regardless of how much else was
+     * said. Additive on purpose: this can only admit records the share rule
+     * rejected, never remove one it accepted.
+     */
+    .filter(
+      (item) =>
+        lexiconCoverage(item.tags, isMusicalTag) >= 0.3 ||
+        lexiconKnownWeight(item.tags, isMusicalTag) >= 2,
+    );
 
   return { items, artists };
 }

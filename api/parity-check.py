@@ -32,7 +32,7 @@ def build_pool() -> tuple[list[dict], dict[str, dict]]:
     pool = []
     for a in CATALOG["albums"]:
         tags = a.get("tags") or []
-        if engine.lexicon_coverage(tags) < engine.MIN_COVERAGE:
+        if not engine.placeable(tags):
             continue
         item = {
             "id": a["id"],

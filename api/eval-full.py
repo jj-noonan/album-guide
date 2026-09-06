@@ -53,7 +53,7 @@ def load_pool(conn: sqlite3.Connection) -> tuple[list[dict], dict[str, dict]]:
     pool = []
     for r in rows:
         t = tags.get(r["id"], ())
-        if engine.lexicon_coverage(t) < engine.MIN_COVERAGE:
+        if not engine.placeable(t):
             continue
         pool.append({
             "id": r["id"], "idBytes": r["id"].encode(), "artistId": r["artist_id"],
