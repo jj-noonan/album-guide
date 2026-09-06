@@ -32,6 +32,13 @@ import { Debug } from './components/Debug';
 import { useAmbient } from './hooks/useAmbient';
 import { DistanceDial } from './components/DistanceDial';
 
+/*
+ * How long an offer may take to arrive and still replace what is on screen.
+ * Comfortably covers a warm request; short enough that nobody has started
+ * reading the two cards it would move.
+ */
+const SWAP_GRACE_MS = 1800;
+
 const STORAGE_KEY = 'segue.session.v1';
 const INGEST_KEY = 'segue.ingested.v1';
 
@@ -219,11 +226,23 @@ export default function App() {
     setApiOffers(hit ?? null);
     if (hit) return;
 
+    /*
+     * Swap only if the answer is quick.
+     *
+     * The machine sleeps when idle, so the first request of a session can take
+     * ten seconds or more. Replacing both offers that late moves them under
+     * someone who has been reading them since the page loaded — worse than
+     * leaving the locally scored ones, which come from a smaller pool but are
+     * a real answer. Past the window the result still lands in the cache, so
+     * the next card gets it instantly and the session upgrades itself without
+     * anything visibly changing.
+     */
     let live = true;
+    const settled = window.setTimeout(() => { live = false; }, SWAP_GRACE_MS);
     void loadOffers(current.id, dial).then((offers) => {
       if (live && offers) setApiOffers(offers);
     });
-    return () => { live = false; };
+    return () => { live = false; window.clearTimeout(settled); };
   }, [current, dial]);
 
   /*
