@@ -44,7 +44,20 @@ supervise() {
     if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
       # Reap a finished child before replacing it, so exits do not accumulate
       # as zombies for the life of the supervisor.
-      [ -n "$pid" ] && wait "$pid" 2>/dev/null
+      #
+      # Exit 2 means the job stopped because an API banned it. Restarting a
+      # minute later puts a request straight back into the ban, and polling
+      # during one can extend it — which is exactly what the resolver stops
+      # itself to avoid, undone by the thing supervising it. So back off for
+      # half an hour on 2, and keep the usual minute for every other exit.
+      if [ -n "$pid" ]; then
+        wait "$pid" 2>/dev/null
+        code=$?
+        if [ "$code" -eq 2 ]; then
+          log "$name stopped rate-limited; holding off 30m rather than polling the ban"
+          sleep 1800
+        fi
+      fi
       $PY -u "$@" >> "$LOG" 2>&1 &
       pid=$!
       log "started $name (pid $pid)"
