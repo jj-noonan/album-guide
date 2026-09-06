@@ -1,6 +1,6 @@
 # album.guide
 
-*choose your own music adventure*
+*a route through the albums you haven't found yet*
 
 Music discovery that travels past the obvious. One album sits centre stage as a
 CD jewel case; two covers offer deliberately different roads onward, and a
@@ -21,39 +21,59 @@ each other*, and a distance dial that moves both further out together.
 
 ## Brand
 
-Assets live in `public/` (marks, favicons, social cards, manifest). Fonts are
-self-hosted Outfit + Playfair Display Black — no CDN.
+Assets live in `public/` (marks, favicons, social cards, manifest); the rules
+behind them are in `BRAND.md`. The typeface is self-hosted Jost — no CDN, and
+not interchangeable: Jost's single-storey `a` is what the logo's tape-reel `a`
+stands in for, so a face with a double-storey `a` leaves the reel looking like
+a foreign object in the word.
 
-The stage stays dark even though the brand is warm and light: Cover Flow's
-depth cues are shadow and reflection, and album art is composed against black
-far more often than cream, so a sand ground would flatten every cover on it.
-The palette is the brand's own dark-mode block — warm ink `#1C1611`, sand text,
-orange as the accent.
-
-The tagline is live text, never the SVG: an SVG in an `<img>` is font-isolated
-and would fall back to a generic serif, and recolouring the raster for a dark
-ground turns the orange `music` teal — flattening the two-face, two-colour
-switch that carries the joke.
+The stage stays dark even though the brand is light: Cover Flow's depth cues
+are shadow and reflection, and album art is composed against black far more
+often than paper, so a paper ground would flatten every cover on it. The stage
+takes the brand's own dark-mode block — ink `#1F1E1C` and the lightened accent
+`#5A9BD8`, which the palette specifies for dark backgrounds because the base
+blue lacks contrast against ink.
 
 ## Hosting
 
-Static app on GitHub Pages, catalog on Turso (both free at this scale — see
-*Known gaps*). `vite.config.ts` uses `base: './'`, so the same build serves
-from `jj-noonan.github.io/album-guide/` and from a custom domain with no rebuild.
+Two pieces.
 
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and
-publishes to Pages.
+**The site** is static, on GitHub Pages. `vite.config.ts` uses `base: './'`, so
+the same build serves from `jj-noonan.github.io/album-guide/` and from a custom
+domain with no rebuild. Pushing to `main` triggers
+`.github/workflows/deploy.yml`.
 
-To move it to a custom domain (`album.guide` once registered): add a `public/CNAME` file containing
-that hostname, then point a DNS `CNAME` record at `noonhub.github.io`. Don't add
-the file before the DNS record exists — Pages will serve 404s at the old URL in
-the gap.
+**The catalog API** is a read-only Python server on Fly.io at
+`album-guide-api.fly.dev`, holding a copy of the crawl database with the
+crawler's bookkeeping dropped. See `DEPLOY.md`. Machines sleep when idle, so
+the first request after a quiet spell takes a few seconds and the rest take
+about one.
+
+The split exists because the browser cannot hold the catalog. Bundling it costs
+~165 gzipped bytes an album, so the 12,000 that ship are 1.9 MB and all 100,931
+would be about 16 MB. The bundle is still there and still works on its own —
+if the API is asleep, slow or gone, the client scores the albums it has and the
+site behaves as it did before there was an API. Nothing about it is required.
+
+To move to a custom domain (`album.guide` once registered): add a
+`public/CNAME` file containing that hostname, then point a DNS `CNAME` record
+at `jj-noonan.github.io`. Don't add the file before the DNS record exists —
+Pages serves 404s at the old URL in the gap. The `og:image` tags in
+`index.html` also point at the Pages URL and want updating at the same time.
 
 ## Running it
 
 ```bash
 npm install
 npm run dev          # http://localhost:5173
+```
+
+That runs against the bundled catalog alone. To develop against the full one:
+
+```bash
+.venv/bin/python api/make-api-db.py   # once, builds data/catalog-api.sqlite
+npm run api                            # serves 100,931 albums on :8787
+VITE_API_BASE=http://127.0.0.1:8787 npm run dev
 ```
 
 Node only — no virtualenv needed for the app itself. Python is used solely by
@@ -219,22 +239,27 @@ items_fts                                  -- FTS5, prefix='2 3 4'
 
 ## Known gaps
 
-- **Deep links are search URLs.** Exact Spotify/Apple album IDs need a Spotify
-  developer app and secret; the search URLs open the right record without
-  credentials. Spotify also deprecated `/v1/recommendations` and audio-features
-  for new apps in late 2024, so the recommendation logic deliberately doesn't
-  depend on them.
+- **Deep links are search URLs for most albums.** A Spotify developer app now
+  resolves exact album IDs, and about 1,100 albums have them; the rest fall
+  back to a search URL that opens the right record without credentials. Spotify
+  also deprecated `/v1/recommendations` and audio-features for new apps in late
+  2024, so the recommendation logic deliberately doesn't depend on them.
 - **No taste layer yet.** The schema has room for a `user_follows` table and an
   `excluded` flag, so loading a followed-artists list is a data load rather than
   a refactor.
-- **`catalog.json` is bundled**, so the export is capped (`--export-limit`,
-  default 12k). The cap samples across all ten popularity deciles rather than
-  taking the most-listened: the far end of the terrain dial aims at the obscure
-  half, and a top-N export would quietly delete the very records it asks for.
-  Within each decile the highest-quality albums win the slots. Past ~30k the app
-  needs an API rather than a bundled catalog.
-- **Vectors are still derived in the browser** on load. They move to write-time
-  columns in `items.vector` when the catalog outgrows the export.
+- **`catalog.json` is still bundled** as the offline floor, capped at 12k
+  (`--export-limit`). The cap samples across all ten popularity deciles rather
+  than taking the most-listened: the far end of the terrain dial aims at the
+  obscure half, and a top-N export would quietly delete the very records it asks
+  for. Within each decile the highest-quality albums win the slots. Browsing no
+  longer depends on it — the API scores all 88,887 — but every path still
+  degrades to it, so the cap now sets how good the *offline* experience is
+  rather than how good the app is.
+- **Vectors are derived at load, twice.** The browser derives them for the
+  bundle and the API derives them for the whole catalog at startup, which is
+  ~25 seconds of the server's boot. They belong in write-time columns on
+  `items`; the reason they are not there yet is that the lexicon is still being
+  edited, and a stored vector is a cache that goes quietly stale when it is.
 - **Ingest is client-side only.** Searching something the catalog lacks pulls
   it live from MusicBrainz + Cover Art Archive in the browser (both send
   `Access-Control-Allow-Origin: *`), so the album is usable in about a second
