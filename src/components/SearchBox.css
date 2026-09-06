@@ -181,7 +181,7 @@
   place-items: center;
   font-size: 17px;
   font-weight: 300;
-  color: var(--sbb-orange);
+  color: var(--accent);
   background: rgba(224, 112, 63, 0.12);
   border: 1px dashed rgba(224, 112, 63, 0.5);
 }

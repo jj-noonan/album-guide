@@ -1,11 +1,18 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 // Self-hosted so the app has no CDN dependency and works offline.
-import '@fontsource/outfit/400.css';
-import '@fontsource/outfit/500.css';
-import '@fontsource/outfit/600.css';
-import '@fontsource/outfit/700.css';
-import '@fontsource/playfair-display/900.css';
+//
+// Jost, and not casually. Its `a` is single-storey — a circle with a stem —
+// and the logo's `a` is a drawn tape reel that replaces that glyph. Outfit,
+// which this used before, has a double-storey `a`, so the reel sat in the word
+// looking like something dropped in from another alphabet. 600 and 700 are
+// carried because the interface uses them; the brand itself is 400 and 500.
+import '@fontsource/jost/400.css';
+import '@fontsource/jost/500.css';
+import '@fontsource/jost/600.css';
+import '@fontsource/jost/700.css';
+// Tokens first: the component styles below resolve --ag-* from here.
+import './brand-tokens.css';
 import './index.css';
 import App from './App.tsx';
 import { ToastHost } from './components/Toast';

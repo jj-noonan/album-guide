@@ -124,5 +124,5 @@ export function exportText(byId: Map<string, Item>): string {
       from || e.fromTitle ? `  (after ${from?.subtitle ?? ''} — ${from?.title ?? e.fromTitle})` : '',
     ].join('  ');
   });
-  return [`seebugbus feedback — ${rows.length} judgements`, ...rows].join('\n');
+  return [`album.guide feedback — ${rows.length} judgements`, ...rows].join('\n');
 }

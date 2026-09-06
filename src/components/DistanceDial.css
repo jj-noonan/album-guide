@@ -27,11 +27,11 @@
 .dial__face:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .dial__face svg { display: block; width: var(--dial-w, 92px); height: auto; }
 
-.gauge__bezel  { fill: var(--sbb-ink); }
-.gauge__face   { fill: var(--sbb-cream); }
-.gauge__num    { fill: var(--sbb-ink); font-size: 10px; font-weight: 700; font-family: "Outfit", sans-serif; }
-.gauge__needle { stroke: var(--sbb-orange); stroke-width: 4; }
-.gauge__hub    { fill: var(--sbb-ink); }
+.gauge__bezel  { fill: var(--ag-ink); }
+.gauge__face   { fill: var(--ag-light); }
+.gauge__num    { fill: var(--ag-ink); font-size: 10px; font-weight: 700; font-family: var(--ag-font, "Jost"), sans-serif; }
+.gauge__needle { stroke: var(--accent); stroke-width: 4; }
+.gauge__hub    { fill: var(--ag-ink); }
 
 .dial__name {
   font-size: 10px;
@@ -95,13 +95,13 @@
   width: 23px; height: 23px;
   display: grid; place-items: center;
   border-radius: 50%;
-  background: var(--sbb-cream);
-  color: var(--sbb-ink);
+  background: var(--ag-light);
+  color: var(--ag-ink);
   font-size: 11.5px;
   font-weight: 700;
 }
 
-.dial__opt--on .dial__optnum { background: var(--sbb-orange); color: var(--sbb-cream); }
+.dial__opt--on .dial__optnum { background: var(--accent); color: var(--ag-light); }
 
 .dial__opttext { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .dial__opttext b { font-size: 12.5px; font-weight: 600; color: var(--ink); }

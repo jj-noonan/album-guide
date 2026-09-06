@@ -1,89 +1,98 @@
-# Seebugbus brand assets
+# album.guide brand assets
 
-Everything a site needs: favicons, app icons, social cards, logo lockups, source SVGs,
-and design tokens.
+Favicons, app icons, social cards, logo lockups, source SVGs, the typeface, and design
+tokens.
 
 ## Palette
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--sbb-ink` | `#2B2118` | Text, outlines, road |
-| `--sbb-sand` | `#F2E3C6` | Page background, badge fill |
-| `--sbb-cream` | `#F8F1E0` | Bus upper panel, windows, surfaces |
-| `--sbb-orange` | `#E0703F` | Primary accent, bus body |
-| `--sbb-teal` | `#3E7F91` | Secondary accent |
-| `--sbb-dome` | `#2F6475` | The jukebox dome only |
+| `--ag-ink` | `#1F1E1C` | Text, reels, cassette shell |
+| `--ag-blue` | `#185FA5` | Accent — the destination reel only |
+| `--ag-grey` | `#8E8C86` | Tape, rules, secondary text |
+| `--ag-paper` | `#FBFAF7` | Page and badge background |
+| `--ag-light` | `#F5F3EE` | Text and marks on dark |
 
-## Typefaces
+Blue was chosen by elimination. Amazon owns orange, TripAdvisor owns green, and Target
+owns red — and the mark's circular geometry is close enough to all three that colour is
+the main thing keeping distance. Don't drift the accent warm.
 
-Outfit — Bold (700) for the wordmark and headings, SemiBold (600) for small labels.
-Playfair Display Black (900) — the tagline only.
+On dark backgrounds the accent lightens to `#5A9BD8`; `#185FA5` doesn't carry enough
+contrast against ink.
 
-Both are Open Font License: `npm i @fontsource/outfit @fontsource/playfair-display`.
+## Typeface
 
-The wordmark stacks as two lines, `seebug` over `bus`, left aligned, tight negative
-tracking, leading a little under the cap height. Never set it on one line — the stack
-is the identity.
+Jost, weights 400 and 500. Open Font License, bundled in `fonts/`, or
+`npm i @fontsource/jost`.
 
-The tagline mixes both faces: CHOOSE YOUR OWN and ADVENTURE in Playfair Black caps, and
-`music` in lowercase Outfit Bold in `--sbb-orange`, sized about 18% larger so its
-x-height optically matches the surrounding caps. The lowercase break is the point — the
-brand voice interrupting the poster voice. Don't flatten it to one case, one face, or
-one colour. This is the only place caps appear in the identity.
+Jost is load-bearing, not a preference. Its `a` is single-storey — a circle with a stem —
+which is what lets the drawn reel replace it without looking like a foreign object
+dropped into the word. Any face with a double-storey `a` (Outfit, DM Sans, Lexend, most
+grotesques) breaks the whole conceit. If you ever swap the typeface, that's the one
+property that has to survive.
 
-## The jukebox dome
+## The mark
 
-The teal dome is the jukebox and it's the dominant element. It springs from a 200-unit
-radius at the vertical midpoint and runs flush to the bottom of the badge, clipped to the
-badge's own corner radius so its base follows the rounded corners rather than cutting
-across them. Don't stop it short — a square-cornered dome inside a rounded badge leaves
-slivers of sand that read as a mistake.
+The `a` and the raised dot in `album.guide` are the two tape reels. The dot sits at the
+centre of the x-height rather than on the baseline, making it an interpunct — this is
+what lets the tape run level between the two reels.
 
-It's a solid fill rather than an outline because thin strokes disappear below about 48px.
-The filled shape survives down to 16px.
+The icon is that same pair with the letters removed, so the favicon is a crop of the
+wordmark rather than a separate drawing.
 
-The bus and road sit at roughly 88% of their original weight so the dome reads first.
-Both carry a sand-coloured casing that separates them from the teal; without it they
-merge into the dome and the mark goes muddy. Bus windows are cream rather than teal for
-the same reason.
+**Reel hubs are hollow, with cog teeth on the inner edge of the ring.** A ring with a
+solid centre dot is a bullseye and reads as Target. The teeth also break the circular
+silhouette, which is what separates it from TripAdvisor. Never fill the hub.
 
-Three mark tiers exist because detail turns to mush at small sizes:
+**Spacing is optically corrected, not measured.** The gap between `m` and the dot is
+crossed by the tape arcs, which visually caps it; the gap between the dot and `g` is open
+and bleeds outward. They're set to different values (14px and 10px at 40pt) so they
+*appear* equal. Don't normalise them.
 
-- `logo-mark` — 96px and up. Roof rack, wheel hubs, full road.
-- `logo-mark-sm` — 32 to 64px. Drops the rack and hubs.
-- `logo-mark-xs` — 16 to 24px. Drops windows and road too.
+## Size tiers
 
-Wire each favicon size to its matching tier rather than downscaling one source.
+The icon degrades in two steps rather than scaling one drawing:
+
+- `icon-lg` — 40px and up. Shell, cog teeth, tape runs, and the two holes along the
+  bottom edge.
+- `icon-sm` — below 40px. Shell and plain hollow reels. Teeth, tape and holes all fill in
+  at small sizes, so they're dropped rather than muddied.
+
+The holes are solid dots rather than strokes, which is why they survive further down than
+the tape does.
+
+Wire each favicon size to its matching tier. Don't downscale one source.
 
 ## Files
 
 ```
-svg/          Source vectors — scale these, don't scale the PNGs
-  logo-primary.svg        Mark + stacked wordmark, horizontal. Site header.
-  logo-stacked.svg        Mark above centred wordmark. Splash, footer.
-  logo-wordmark.svg       Type only, stacked.
-  *-reversed.svg          Same three with the wordmark in sand. Use on dark UI.
-  logo-mark.svg           Full-detail badge, 96px+.
-  logo-mark-sm.svg        Reduced, 32-64px.
-  logo-mark-xs.svg        Heavily reduced, 16-24px.
-  logo-mark-transparent.svg  No badge fill.
-  logo-mono.svg           Single-ink. Stamps, print, watermarks.
-  icon-maskable.svg       13% safe padding for Android adaptive icons.
-  tagline.svg             Mixed-face tagline lockup.
+svg/          Source vectors — scale these, never the PNGs
+  logo-primary.svg          Full lockup. Site header.
+  logo-primary-reversed.svg Same, for dark backgrounds.
+  logo-wordmark.svg         Tight-cropped lockup, no side padding.
+  icon-lg.svg               Outline icon, 40px+.
+  icon-sm.svg               Outline icon, below 40px.
+  icon-lg-reversed.svg      Outline icon for dark backgrounds.
+  icon-mono.svg             Single-ink, no accent. Print, stamps, watermarks.
+  app-icon.svg              Filled shell on a rounded badge.
+  app-icon-square.svg       Same, square corners, for iOS.
+  app-icon-maskable.svg     12% safe padding for Android adaptive icons.
 
-favicon/      favicon.ico (16/32/48 bundled) + individual PNGs
-icons/        apple-touch-icon.png, icon-192, icon-512, icon-maskable-512
-social/       og-image.png (1200x630), twitter-card.png (1200x600)
-logo/         Raster exports, 1x and 2x, including tagline and reversed
-brand-tokens.css   CSS custom properties, includes a dark-mode block
+favicon/      favicon.ico (16/32/48) + individual PNGs
+icons/        apple-touch-icon, icon-192, icon-512, icon-maskable-512
+social/       og-image, og-image-dark (1200x630), twitter-card (1200x600)
+logo/         Raster exports, 1x and 2x, light and reversed
+fonts/        Jost 400 and 500, TTF
+brand-tokens.css   Custom properties with a dark-mode block
 site.webmanifest   PWA manifest
 ```
 
-The badge stays sand in both light and dark contexts — it needs the light ground to hold
-the dome. Only the wordmark flips, which is what the reversed variants are for.
+The outline icon is for UI — headers, tabs, inline. The filled `app-icon` is for home
+screens and anywhere the mark sits on an unpredictable background, where outline-only
+would disappear.
 
-The apple-touch-icon is square on purpose. iOS applies its own corner mask, so a
-pre-rounded source gets double-rounded on the home screen.
+The apple-touch-icon is square on purpose. iOS applies its own corner mask, and a
+pre-rounded source gets rounded twice.
 
 ## HTML
 
@@ -93,24 +102,25 @@ pre-rounded source gets double-rounded on the home screen.
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<meta name="theme-color" content="#2B2118">
+<meta name="theme-color" content="#185FA5">
 
-<meta property="og:image" content="https://YOURDOMAIN/social/og-image.png">
+<meta property="og:image" content="https://album.guide/social/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="https://YOURDOMAIN/social/twitter-card.png">
+<meta name="twitter:image" content="https://album.guide/social/twitter-card.png">
 ```
 
-## Clear space and minimum sizes
+## Clear space and minimums
 
-Keep clear space around the lockup equal to the height of the `b` in `bus`.
-Minimum widths: horizontal lockup 180px, stacked lockup 120px, mark 16px.
+Clear space around the lockup equals the height of the `b` in `lbum`.
+Minimum lockup width 200px. Minimum icon 16px.
 
-Don't recolour the mark, stretch it, or add effects.
+Don't recolour the reels, fill the hubs, straighten the tape arcs in the lockup, or curve
+them in the icon — the lockup curves, the icon runs straight, and that difference is
+deliberate.
 
-## Note on the illustration
+## Placeholder
 
-The van is drawn as a generic retro shape rather than a Volkswagen. VW protects the
-Beetle and Microbus silhouettes as trade dress, so keep any future variants
-non-specific too.
+The social card tagline — "a route through the albums you haven't found yet" — is a
+placeholder. Swap it for the site's actual line and re-export.

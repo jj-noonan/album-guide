@@ -33,7 +33,7 @@
   border-bottom: 1px solid var(--hairline);
 }
 
-.debug__head b { color: var(--sbb-orange); letter-spacing: 0.1em; text-transform: uppercase; font-size: 10px; }
+.debug__head b { color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; font-size: 10px; }
 .debug__head span { flex: 1; color: var(--ink-muted); font-size: 10.5px; }
 .debug__head button {
   border: 0; background: none; color: var(--ink-muted);
@@ -47,7 +47,7 @@
   font-size: 9.5px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--sbb-orange);
+  color: var(--accent);
 }
 
 .debug table { width: 100%; border-collapse: collapse; }
@@ -64,7 +64,7 @@
 .debug__axis { display: grid; grid-template-columns: 68px 1fr 34px 52px; align-items: center; gap: 7px; }
 .debug__axis > span:first-child { color: var(--ink-faint); }
 .debug__bar { height: 6px; border-radius: 3px; background: rgba(242,227,198,.1); overflow: hidden; }
-.debug__bar i { display: block; height: 100%; background: var(--sbb-orange); }
+.debug__bar i { display: block; height: 100%; background: var(--accent); }
 .debug__num { text-align: right; }
 .debug__sd { color: var(--ink-faint); font-size: 10px; }
 
@@ -72,7 +72,7 @@
 .debug__offer:first-of-type { border-top: 0; }
 .debug__offerhead b {
   display: inline-block; min-width: 46px;
-  color: var(--sbb-orange); text-transform: uppercase; font-size: 9.5px; letter-spacing: .08em;
+  color: var(--accent); text-transform: uppercase; font-size: 9.5px; letter-spacing: .08em;
 }
 .debug__offerhead span { color: var(--ink-faint); }
 

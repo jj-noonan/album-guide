@@ -79,7 +79,7 @@
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--sbb-orange);
+  color: var(--accent);
 }
 
 .about p { margin: 0 0 10px; font-size: 13px; line-height: 1.62; color: var(--ink-muted); }

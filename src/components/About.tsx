@@ -21,14 +21,14 @@ export function About({ onClose, onRestart }: Props) {
   }, [onClose]);
 
   return (
-    <div className="about" role="dialog" aria-modal="true" aria-label="About seebugbus">
+    <div className="about" role="dialog" aria-modal="true" aria-label="About album.guide">
       <div className="about__scrim" onClick={onClose} />
       <div className="about__panel">
         <button className="about__close" onClick={onClose} aria-label="Close">×</button>
 
         <header className="about__head">
-          <img src="./svg/logo-stacked-reversed.svg" alt="seebugbus" width={116} />
-          <p className="tagline">Choose your own <em>music</em> adventure</p>
+          <img src="./svg/logo-primary-reversed.svg" alt="album.guide" width={116} />
+          <p className="tagline">A route through the albums you haven&rsquo;t <em>found</em> yet</p>
         </header>
 
         <p className="about__lede">

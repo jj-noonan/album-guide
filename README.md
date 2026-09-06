@@ -1,4 +1,4 @@
-# seebugbus
+# album.guide
 
 *choose your own music adventure*
 
@@ -39,12 +39,12 @@ switch that carries the joke.
 
 Static app on GitHub Pages, catalog on Turso (both free at this scale — see
 *Known gaps*). `vite.config.ts` uses `base: './'`, so the same build serves
-from `noonhub.github.io/seebugbus/` and from a custom domain with no rebuild.
+from `jj-noonan.github.io/seebugbus/` and from a custom domain with no rebuild.
 
 Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds and
 publishes to Pages.
 
-To move it to `seebugbus.noonan.cc` later: add a `public/CNAME` file containing
+To move it to a custom domain (`album.guide` once registered): add a `public/CNAME` file containing
 that hostname, then point a DNS `CNAME` record at `noonhub.github.io`. Don't add
 the file before the DNS record exists — Pages will serve 404s at the old URL in
 the gap.

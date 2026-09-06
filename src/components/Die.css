@@ -12,12 +12,12 @@
    object on the stage that is not a rectangle of album art. */
 /* Same three inks as the logo badge and the gauge: cream ground, ink line. */
 .die__body {
-  fill: var(--sbb-cream);
-  stroke: var(--sbb-ink);
+  fill: var(--ag-light);
+  stroke: var(--ag-ink);
   stroke-width: 4;
 }
 
-.die__pip { fill: var(--sbb-ink); }
+.die__pip { fill: var(--ag-ink); }
 
 .shuffle:hover .die { transform: translateY(-3px) rotate(-7deg) scale(1.06); }
 

@@ -1,11 +1,11 @@
 {
-  "name": "seebugbus",
-  "short_name": "seebugbus",
-  "description": "Music discovery that travels past the obvious.",
+  "name": "album.guide",
+  "short_name": "album.guide",
+  "description": "A route through the albums you haven't found yet.",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#1C1611",
-  "theme_color": "#2B2118",
+  "background_color": "#FBFAF7",
+  "theme_color": "#185FA5",
   "icons": [
     {
       "src": "./icons/icon-192.png",

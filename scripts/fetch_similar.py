@@ -32,7 +32,7 @@ GRAPH = HERE.parent / "data" / "similarity-graph.json"
 LABS = "https://labs.api.listenbrainz.org/similar-artists/json"
 ALGO = ("session_based_days_7500_session_300_contribution_5_"
         "threshold_10_limit_100_filter_True_skip_30")
-UA = "seebugbus-eval/0.1 (jj@noonan.cc)"
+UA = "album.guide-eval/0.1 (jj@noonan.cc)"
 
 # Deliberately spread across idioms so the suite can't pass by being good at
 # one kind of music: stadium pop, heartland rock, jam band, blues revival,

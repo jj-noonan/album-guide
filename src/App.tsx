@@ -450,9 +450,9 @@ export default function App() {
     // stuck, so it must never be a dead end.
     return (
       <div className="loading">
-        <img className="loading__logo" src="./svg/logo-stacked-reversed.svg" alt="seebugbus" width={190} />
+        <img className="loading__logo" src="./svg/logo-primary-reversed.svg" alt="album.guide" width={190} />
         <p className="tagline">
-          Choose your own <em>music</em> adventure
+          A route through the albums you haven&rsquo;t <em>found</em> yet
         </p>
         <div style={{ fontSize: 12, opacity: 0.6 }}>
           {catalogSize.toLocaleString()} albums aboard ·{' '}
@@ -474,10 +474,10 @@ export default function App() {
             onClick={() => setShowAbout(true)}
             title="What this is, and how to drive it"
           >
-            <img className="brand__mark" src="./svg/logo-mark-sm.svg" alt="seebugbus" width={64} height={64} />
+            <img className="brand__mark" src="./svg/icon-lg-reversed.svg" alt="album.guide" width={64} height={64} />
             <span className="brand__word">
-              <span>seebug</span>
-              <span>bus</span>
+              <span>album</span>
+              <span>.guide</span>
               <span className="brand__count">{pool.length.toLocaleString()} albums</span>
             </span>
           </button>

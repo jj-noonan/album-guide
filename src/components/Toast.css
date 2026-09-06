@@ -30,6 +30,6 @@
 }
 
 .toast strong { font-weight: 600; }
-.toast--ok   { border-left: 3px solid var(--sbb-orange); }
+.toast--ok   { border-left: 3px solid var(--accent); }
 .toast--warn { border-left: 3px solid #b8512a; }
-.toast--busy { border-left: 3px solid var(--sbb-teal); }
+.toast--busy { border-left: 3px solid var(--accent-alt); }

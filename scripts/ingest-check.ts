@@ -9,7 +9,7 @@ const realFetch = globalThis.fetch;
 globalThis.fetch = ((input: any, init: any = {}) =>
   realFetch(input, {
     ...init,
-    headers: { ...(init.headers ?? {}), 'User-Agent': 'seebugbus-dev/0.1 (jj@noonan.cc)' },
+    headers: { ...(init.headers ?? {}), 'User-Agent': 'album.guide-dev/0.1 (jj@noonan.cc)' },
   })) as typeof fetch;
 
 import { validate, ingest } from '../src/engine/ingest';

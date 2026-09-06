@@ -9,30 +9,26 @@
  * card left, the two forward offers right, and what to play with it below.
  */
 :root {
-  /* seebugbus brand tokens */
-  --sbb-ink: #2b2118;
-  --sbb-sand: #f2e3c6;
-  --sbb-cream: #f8f1e0;
-  --sbb-orange: #e0703f;
-  --sbb-teal: #3e7f91;
-  --sbb-tan: #c2ae8c;
-
   /*
-   * The brand is warm and light; this screen stays dark, and deliberately.
-   * Cover Flow's depth cues live in shadow and reflection, and album art is
-   * composed against black far more often than against cream — a sand stage
-   * would flatten every cover on it. So we take the brand's own dark mode
-   * (bg #1C1611, sand text) rather than inventing one: warm ink instead of
-   * neutral black, and orange where the accent used to be.
+   * Brand tokens come from brand-tokens.css (--ag-*). Nothing is redefined
+   * here; the stage below is derived from them.
+   *
+   * The brand is light — paper #FBFAF7 — and this screen stays dark, on
+   * purpose. Cover Flow's depth cues live in shadow and reflection, and album
+   * art is composed against black far more often than against paper, so a
+   * light stage would flatten every cover on it. So the stage takes the
+   * brand's own dark mode rather than inventing one: ink #1F1E1C, its light
+   * text, and the lightened accent #5A9BD8 that the palette specifies for dark
+   * backgrounds because the base blue lacks contrast against ink.
    */
-  --stage-near: #241b13;
-  --stage-far: #100c09;
-  --ink: var(--sbb-sand);
-  --ink-muted: rgba(242, 227, 198, 0.56);
-  --ink-faint: rgba(242, 227, 198, 0.3);
-  --hairline: rgba(242, 227, 198, 0.14);
-  --accent: var(--sbb-orange);
-  --accent-alt: var(--sbb-teal);
+  --stage-near: #262523;
+  --stage-far: #131211;
+  --ink: #f5f3ee;
+  --ink-muted: rgba(245, 243, 238, 0.56);
+  --ink-faint: rgba(245, 243, 238, 0.3);
+  --hairline: rgba(245, 243, 238, 0.14);
+  --accent: #5a9bd8;
+  --accent-alt: var(--ag-grey);
   --spotify: #1db954;
 
   /*
@@ -65,7 +61,7 @@
   --glide: 0.56s;
 
   color-scheme: dark;
-  font-family: "Outfit", ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-family: var(--ag-font, "Jost"), ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -154,7 +150,7 @@ button { font: inherit; color: inherit; }
   font-size: clamp(26px, 2.5vw, 36px);
   line-height: 0.84;
   letter-spacing: -0.038em;
-  color: var(--sbb-sand);
+  color: var(--ink);
 }
 
 .brand__count {
@@ -423,7 +419,7 @@ button { font: inherit; color: inherit; }
   transition: color 0.18s;
 }
 
-.shuffle:hover .shuffle__label { color: var(--sbb-sand); }
+.shuffle:hover .shuffle__label { color: var(--ink); }
 
 
 /* ── the plate: what this record is, and where to play it ────────────── */
@@ -481,7 +477,7 @@ button { font: inherit; color: inherit; }
 }
 
 .plate__title a:hover {
-  color: var(--sbb-cream);
+  color: var(--ink);
   border-bottom-color: rgba(224, 112, 63, 0.7);
 }
 
@@ -587,35 +583,29 @@ button { font: inherit; color: inherit; }
 .loading__logo { width: min(46vw, 190px); height: auto; }
 
 /*
- * The tagline, set as live text rather than the SVG.
+ * The tagline, live text rather than an image.
  *
- * An SVG loaded through <img> is font-isolated — it cannot see webfonts loaded
- * by the page — so tagline.svg would render in a fallback serif and lose
- * Playfair entirely. Recolouring the raster with a filter was worse: it turns
- * the orange "music" teal, flattening the very two-colour switch the brand
- * notes say carries the joke. Live text keeps both faces and both colours, and
- * stays crisp at any size.
+ * The previous one set "music" in a second face and a second colour — a joke
+ * that belonged to the old identity, and one this brand does not make: it is
+ * Jost throughout, and the accent is the only colour that moves. An SVG
+ * through <img> would also be font-isolated and could not see the webfont at
+ * all, so live text is the only way it renders in Jost rather than a fallback.
  */
 .tagline {
   margin: 0;
-  font-family: "Playfair Display", Georgia, serif;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.012em;
-  line-height: 1;
-  color: var(--sbb-sand);
-  white-space: nowrap;
+  font-family: var(--ag-font, "Jost"), ui-sans-serif, system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.3;
+  color: var(--ink-muted);
+  max-width: 30ch;
+  text-align: center;
 }
 
 .tagline em {
-  font-family: "Outfit", system-ui, sans-serif;
-  font-weight: 700;
   font-style: normal;
-  text-transform: lowercase;
-  /* Sized up so the lowercase x-height optically matches the surrounding caps. */
-  font-size: 1.18em;
-  letter-spacing: -0.02em;
-  color: var(--sbb-orange);
+  font-weight: 500;
+  color: var(--accent);
 }
 
 

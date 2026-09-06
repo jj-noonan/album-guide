@@ -1,0 +1,25 @@
+:root {
+  --ag-ink: #1F1E1C;
+  --ag-blue: #185FA5;
+  --ag-grey: #8E8C86;
+  --ag-paper: #FBFAF7;
+  --ag-light: #F5F3EE;
+
+  --ag-bg: var(--ag-paper);
+  --ag-text: var(--ag-ink);
+  --ag-accent: var(--ag-blue);
+  --ag-rule: var(--ag-grey);
+
+  --ag-font: "Jost", ui-sans-serif, system-ui, sans-serif;
+  --ag-radius: 10px;
+  --ag-radius-lg: 20px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ag-bg: #1F1E1C;
+    --ag-text: #F5F3EE;
+    --ag-accent: #5A9BD8;
+    --ag-rule: #7A786F;
+  }
+}

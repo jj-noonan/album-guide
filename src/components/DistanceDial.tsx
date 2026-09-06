@@ -76,7 +76,7 @@ export function DistanceDial({ value, onChange }: Props) {
             const on = i <= index;
             return (
               <g key={i} opacity={on ? 1 : 0.34}>
-                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--sbb-ink)" strokeWidth={2.6} strokeLinecap="round" />
+                <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--ag-ink)" strokeWidth={2.6} strokeLinecap="round" />
                 <text x={tx} y={ty + 3.2} textAnchor="middle" className="gauge__num">{i + 1}</text>
               </g>
             );
