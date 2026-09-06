@@ -74,6 +74,19 @@ _token: dict = {"value": None, "expires": 0.0}
 # rather than instantaneous rate. Grouping by artist cut the volume 2.7x;
 # halving the rate on top costs another nine hours of unattended running and
 # is worth it against losing a day to a third ban.
+# Ten, not the documented fifty.
+#
+# Spotify's search caps `limit` at 50 in the reference and rejects anything
+# above 10 for this app with "Invalid limit" — an undocumented restriction that
+# comes with development mode. Worth knowing before the extension request is
+# approved, because the page size triples on the far side of it.
+PAGE = 10
+# How many pages to ask for before giving up on an artist. Search returns
+# albums by relevance rather than exhaustively, so a prolific artist's less
+# famous records sit past the first page. Three costs 2,368 requests across the
+# whole catalog against one, and finds records one page would miss.
+MAX_PAGES = 3
+
 MIN_INTERVAL = 2.0
 _last_call = [0.0]
 
@@ -120,7 +133,7 @@ def accepts(want_title: str, want_artist: str, got_title: str, got_artist: str) 
     return title_ok and artist_ok
 
 
-def artist_albums(artist: str) -> list[dict] | None:
+def artist_albums(artist: str, offset: int = 0) -> list[dict] | None:
     """
     Up to 50 of an artist's albums in one search.
 
@@ -138,7 +151,8 @@ def artist_albums(artist: str) -> list[dict] | None:
         paced()
         try:
             r = requests.get(SEARCH_URL,
-                             params={"q": q, "type": "album", "limit": 50},
+                             params={"q": q, "type": "album",
+                                     "limit": PAGE, "offset": offset},
                              headers={"Authorization": f"Bearer {token()}"}, timeout=25)
         except requests.RequestException:
             time.sleep(1 + attempt)
@@ -227,7 +241,21 @@ def main() -> int:
         if not wanted:
             continue
         try:
-            candidates = artist_albums(art["artist"])
+            # Page only while something is still unmatched. Most artists have a
+            # handful of records and are done after one request.
+            candidates: list[dict] = []
+            found: dict[str, str] = {}
+            for page in range(MAX_PAGES):
+                got = artist_albums(art["artist"], offset=page * PAGE)
+                if got is None:
+                    candidates = None  # type: ignore[assignment]
+                    break
+                if not got:
+                    break
+                candidates.extend(got)
+                found = match_albums(wanted, candidates, art["artist"])
+                if len(found) >= len(wanted) or len(got) < PAGE:
+                    break
         except RateLimited as e:
             print(f"\nstopping: {e}")
             print(f"resolved {hit:,} of {checked:,} checked; rerun after it lifts.")
@@ -240,7 +268,6 @@ def main() -> int:
         if candidates is None:
             continue
 
-        found = match_albums(wanted, candidates, art["artist"])
         for row in wanted:
             db.set_spotify(conn, row["id"], found.get(row["id"]))
             checked += 1
