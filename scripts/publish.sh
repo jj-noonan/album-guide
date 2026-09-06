@@ -54,6 +54,9 @@ fi
 
 # Cheap, and it has caught a broken image twice. Better here than after a
 # deploy has reported success and the URL has stopped answering.
+log "checking for shadowed definitions"
+.venv/bin/python api/dupe-check.py || { log "duplicate definitions — not deploying"; exit 1; }
+
 log "checking the image has everything the server imports"
 bash api/image-check.sh || { log "image check failed — not deploying the API"; exit 1; }
 
