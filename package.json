@@ -20,7 +20,7 @@
     "dist-check": "vite-node scripts/dist-check.ts",
     "api-wire-check": "vite-node scripts/api-wire-check.ts",
     "engine-parity": "vite-node scripts/engine-parity.ts && .venv/bin/python api/parity-check.py",
-    "engine-constants": "npx vite-node scripts/dump-lexicon.ts \&\& .venv/bin/python scripts/export_engine_constants.py",
+    "engine-constants": "vite-node scripts/dump-lexicon.ts && .venv/bin/python scripts/export_engine_constants.py",
     "api": ".venv/bin/python api/server.py",
     "publish": "bash scripts/publish.sh",
     "ratings": ".venv/bin/python -u scripts/backfill_ratings.py",
