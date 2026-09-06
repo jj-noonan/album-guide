@@ -50,27 +50,29 @@ const before = pickBranches(local, ITEMS, 0, excl).map((b) => b.item.id).join(',
 const after = pickBranches(local, ITEMS, 0, excl).map((b) => b.item.id).join(',');
 check('scoring is deterministic', before === after);
 
-// 3. Candidates from the API must be scorable alongside bundled ones without
-//    the engine noticing a difference in kind.
-const cands = (await get<{ candidates: RawAlbum[] }>(
-  `/v1/recs?id=${local.id}&dial=0&limit=240`)).candidates.map(toItem);
-check('api returns candidates', cands.length > 100, `${cands.length}`);
+// 3. Phase 2: the server now returns scored offers, not candidates.
+const recs = await get<{ offers: { role: string; item: RawAlbum; distance: number }[] }>(
+  `/v1/recs?id=${local.id}&dial=0`);
+check('recs returns two scored offers', recs.offers?.length === 2,
+  (recs.offers ?? []).map((o) => `${o.role}: ${o.item.artistName} — ${o.item.title}`).join(' | '));
+check('offers carry both roles',
+  new Set((recs.offers ?? []).map((o) => o.role)).size === 2);
+
+// 4. Offers must be complete enough to render and to score from next.
+const offered = (recs.offers ?? []).map((o) => toItem(o.item));
+check('offers carry tags', offered.every((i) => i.tags.length > 0));
+check('offers carry art', offered.every((i) => Boolean(i.artUrl)));
+check('offers carry popularity and quality',
+  offered.every((i) => i.popularity > 0 && i.quality > 0),
+  offered.map((i) => `${i.popularity}/${i.quality}`).join(' '));
+
+// The server sees a far larger catalog than the bundle, which is the point.
 const known = new Set(ITEMS.map((i) => i.id));
-const novel = cands.filter((c) => !known.has(c.id));
-check('most candidates are new to the bundle', novel.length > cands.length / 2,
-  `${novel.length} of ${cands.length} are not in the 12,000`);
-
-const merged = [...ITEMS, ...novel];
-const widened = pickBranches(local, merged, 0, excl);
-check('the widened pool still produces two offers', widened.length === 2,
-  widened.map((b) => `${b.role}: ${b.item.subtitle} — ${b.item.title}`).join(' | '));
-
-// 4. Every fetched item must be complete enough to score. A candidate with no
-//    tags scores from a dead-centre vector and quietly pollutes the pool.
-const untagged = novel.filter((i) => i.tags.length === 0).length;
-check('fetched candidates carry tags', untagged === 0, `${untagged} untagged`);
-const noArt = novel.filter((i) => !i.artUrl).length;
-check('fetched candidates carry art', noArt === 0, `${noArt} without art`);
+const health2 = await get<{ albums: number }>('/v1/health');
+check('server scores a much larger catalog than the bundle ships',
+  health2.albums > ITEMS.length * 5,
+  `${health2.albums.toLocaleString()} vs ${ITEMS.length.toLocaleString()}`);
+void known;
 
 // 5. Reachability: the whole point.
 const joni = (await get<{ items: RawAlbum[] }>('/v1/search?q=joni%20mitchell&limit=5')).items;

@@ -245,7 +245,22 @@ export const TAG_LEXICON: Record<string, TagProfile> = {
 
 /** Year -> era axis. 1950 maps to 0, the current year to 1. */
 const ERA_MIN = 1950;
-const ERA_MAX = new Date().getFullYear();
+/*
+ * Frozen, not the current year.
+ *
+ * This was `new Date().getFullYear()`, which made the era axis depend on when
+ * the code ran: every album's era value drifts down each January, the axis
+ * spread drifts with it, and every distance in the catalog changes slightly
+ * for no reason anybody would connect to the calendar. It also meant the
+ * server-side engine would disagree with the client whenever the two ran
+ * either side of midnight on New Year's Eve.
+ *
+ * Bump it deliberately when the catalog's recent end genuinely needs more
+ * room, and re-run the eval when you do.
+ */
+const ERA_MAX = 2026;
+
+export { ERA_MIN, ERA_MAX };
 
 export function eraFromYear(year: number | null): number {
   if (year == null) return 0.5;

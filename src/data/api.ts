@@ -53,16 +53,38 @@ export async function fetchItems(ids: string[]): Promise<Item[]> {
   return out ? out.items.map(toItem) : [];
 }
 
-/** Candidates for one card. Phase 1: the client still scores them. */
-export async function fetchRecs(
+export interface ApiOffer {
+  role: 'deeper' | 'wider';
+  item: Item;
+  distance: number;
+}
+
+/**
+ * Two scored offers for one card, chosen from the whole catalog.
+ *
+ * The scorer runs on the server now, over ~89,000 scorable albums rather than
+ * the ~11,500 the client holds. It is a port of the client's engine and is
+ * checked against it — api/parity-check.py requires identical albums in
+ * identical roles for the same seeds at every dial setting, so this returns
+ * what the client would have returned given the same catalog.
+ *
+ * Null, not an empty array, when the API has nothing to say: the caller has to
+ * tell "the server chose these" from "ask the local engine instead", and an
+ * empty array would collapse the two.
+ */
+export async function fetchOffers(
   id: string,
   dial: number,
-  limit = 240,
-): Promise<Item[]> {
-  const out = await get<{ candidates: RawAlbum[] }>(
-    `/v1/recs?id=${encodeURIComponent(id)}&dial=${dial.toFixed(2)}&limit=${limit}`,
+): Promise<ApiOffer[] | null> {
+  const out = await get<{ offers?: { role: string; item: RawAlbum; distance: number }[] }>(
+    `/v1/recs?id=${encodeURIComponent(id)}&dial=${dial.toFixed(2)}`,
   );
-  return out ? out.candidates.map(toItem) : [];
+  if (!out?.offers?.length) return null;
+  return out.offers.map((o) => ({
+    role: o.role === 'wider' ? 'wider' : 'deeper',
+    item: toItem(o.item),
+    distance: o.distance,
+  }));
 }
 
 export async function searchApi(q: string, limit = 12): Promise<Item[]> {

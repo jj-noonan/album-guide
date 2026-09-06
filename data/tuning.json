@@ -1,0 +1,23 @@
+{
+ "radiusNear": 0.14,
+ "radiusFar": 0.6,
+ "sigmaNear": 0.1,
+ "sigmaFar": 0.16,
+ "popularityNear": 9.8,
+ "popularityFar": 3,
+ "popularitySigma": 3.5,
+ "qualityWeightNear": 0.28,
+ "qualityWeightFar": 0.55,
+ "idiomWeight": 0.65,
+ "evidenceFull": 24,
+ "mode": "texture",
+ "idiomNear": 0.85,
+ "idiomFar": 0,
+ "idiomSigma": 0.26,
+ "secondaryExp": 0.45,
+ "divergenceBonus": 1.6,
+ "poolSize": 30,
+ "pairSearch": 12,
+ "jitter": 0.6,
+ "sameArtistPenalty": 0.25
+}

@@ -8,7 +8,7 @@ import { AXES, AXIS_POLES, type Axis, type Item, type Vector } from '../data/sch
  * numerically; `abstract` is boosted because a jump in strangeness is the thing
  * a listener notices most.
  */
-const AXIS_WEIGHT: Record<Axis, number> = {
+export const AXIS_WEIGHT: Record<Axis, number> = {
   era: 0.75,
   energy: 1.0,
   density: 1.0,
@@ -169,7 +169,7 @@ export const TUNING = {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
-const WEIGHT_NORM = Math.sqrt(
+export const WEIGHT_NORM = Math.sqrt(
   AXES.reduce((sum, a) => sum + AXIS_WEIGHT[a] * AXIS_WEIGHT[a], 0),
 );
 

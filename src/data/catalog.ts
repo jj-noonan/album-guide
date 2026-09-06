@@ -1,3 +1,4 @@
+import CONSTANTS from './engine-constants.json';
 import rawCatalog from './catalog.json';
 import { deriveVector, lexiconCoverage } from './lexicon';
 import { AXES, type Artist, type Axis, type Item, type RawAlbum, type RawCatalog } from './schema';
@@ -147,13 +148,20 @@ export const ITEMS: Item[] = built.items;
  * axes alone.
  */
 export const AXIS_SD: Record<Axis, number> = (() => {
+  /*
+   * Read, not measured.
+   *
+   * This used to compute the spread of each axis across the albums that
+   * happened to ship. That makes distance depend on the sample: the same two
+   * records sit further apart in a catalog of 12,000 than in one of 91,589,
+   * and the server-side engine — which sees all of them — would disagree with
+   * the client about every distance in the catalog.
+   *
+   * data/engine-constants.json is computed once over the whole database by
+   * scripts/export_engine_constants.py, and both engines read it.
+   */
   const out = {} as Record<Axis, number>;
-  for (const axis of AXES) {
-    if (!ITEMS.length) { out[axis] = 1; continue; }
-    const mean = ITEMS.reduce((s, i) => s + i.vector[axis], 0) / ITEMS.length;
-    const varc = ITEMS.reduce((s, i) => s + (i.vector[axis] - mean) ** 2, 0) / ITEMS.length;
-    out[axis] = Math.max(0.02, Math.sqrt(varc));
-  }
+  for (const axis of AXES) out[axis] = CONSTANTS.axisSd[axis] ?? 1;
   return out;
 })();
 
@@ -204,26 +212,12 @@ export const TAG_SETS: Map<string, Set<string>> = new Map(
  * around it: a term held by half the catalog earns almost nothing, and the
  * terms that actually name an idiom carry the score.
  */
-export const TAG_IDF: Map<string, number> = (() => {
-  const df = new Map<string, number>();
-  for (const set of TAG_SETS.values()) {
-    for (const t of set) df.set(t, (df.get(t) ?? 0) + 1);
-  }
-  const n = Math.max(1, ITEMS.length);
-  const out = new Map<string, number>();
-  // Smoothed, so a tag on every record lands near 0 rather than exactly 0 and
-  // a hapax does not dwarf everything else.
-  for (const [tag, count] of df) out.set(tag, Math.log((n + 1) / (count + 1)));
-  return out;
-})();
+export const TAG_IDF: Map<string, number> = new Map(
+  Object.entries(CONSTANTS.tagIdf),
+);
 
-/** Mean IDF, used as the weight for a tag the catalog has never seen. */
-export const MEAN_IDF: number = (() => {
-  if (!TAG_IDF.size) return 1;
-  let sum = 0;
-  for (const v of TAG_IDF.values()) sum += v;
-  return sum / TAG_IDF.size;
-})();
+/** Weight for a tag the catalog has never seen. */
+export const MEAN_IDF: number = CONSTANTS.meanIdf;
 
 export const ITEM_BY_ID = new Map(ITEMS.map((i) => [i.id, i]));
 export const ARTISTS = built.artists;

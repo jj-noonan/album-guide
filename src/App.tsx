@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { CATALOG_STATS, ITEMS, ITEM_BY_ID } from './data/catalog';
 import { CORRIDOR_BY_ID } from './data/corridors';
 import type { Item } from './data/schema';
@@ -14,7 +14,7 @@ import { SearchBox } from './components/SearchBox';
 import { Die, ROLL_MS } from './components/Die';
 import { About } from './components/About';
 import { Feedback } from './components/Feedback';
-import { apiConfigured, fetchRecs } from './data/api';
+import { apiConfigured, fetchOffers, type ApiOffer } from './data/api';
 import {
   weights as feedbackWeights,
   verdictFor,
@@ -81,25 +81,32 @@ export default function App() {
    * a wildcard, and sit in the trail like anything else.
    */
   const [ingested, setIngested] = useState<Item[]>(initialIngested);
-  const [fetched, setFetched] = useState<Item[]>([]);
-  const fetchedIds = useRef(new Set<string>());
-
   /*
    * The pool the engine scores: what shipped, what search pulled in, and what
    * the API has supplied for cards seen this session. Merged rather than
    * swapped, so an absent API leaves the app exactly as it was.
    */
   const pool = useMemo(
-    () => (ingested.length || fetched.length ? [...ITEMS, ...ingested, ...fetched] : ITEMS),
-    [ingested, fetched],
+    () => (ingested.length ? [...ITEMS, ...ingested] : ITEMS),
+    [ingested],
   );
+  /*
+   * Offers scored by the server. Declared here because `byId` reads it during
+   * render — the third time in this file that state used by a useMemo was
+   * written below it, which is a ReferenceError at first paint rather than a
+   * type error, so the compiler catching it is luck.
+   */
+  const [apiOffers, setApiOffers] = useState<ApiOffer[] | null>(null);
+
   const byId = useMemo(() => {
-    if (!ingested.length && !fetched.length) return ITEM_BY_ID;
+    if (!ingested.length && !apiOffers?.length) return ITEM_BY_ID;
     const m = new Map(ITEM_BY_ID);
     for (const i of ingested) m.set(i.id, i);
-    for (const i of fetched) m.set(i.id, i);
+    // Server offers are albums the bundle may not hold; the trail looks them
+    // up by id, so they have to be findable after they are chosen.
+    for (const o of apiOffers ?? []) m.set(o.item.id, o.item);
     return m;
-  }, [ingested, fetched]);
+  }, [ingested, apiOffers]);
 
   const addIngested = useCallback((item: Item) => {
     setIngested((cur) => {
@@ -178,17 +185,24 @@ export default function App() {
    * unreachable, this stays empty and the engine scores the bundled catalog
    * exactly as it did before.
    */
+  /*
+   * Offers scored by the server, for the card in focus.
+   *
+   * The engine there sees ~89,000 albums against the ~11,500 bundled here, so
+   * this is the difference between recommending from an eighth of the catalog
+   * and recommending from all of it. Null until it answers — the local engine
+   * fills the gap meanwhile, so there is never a moment with nothing to click.
+   */
+
   useEffect(() => {
-    if (!apiConfigured() || !current) return;
+    if (!apiConfigured() || !current) {
+      setApiOffers(null);
+      return;
+    }
     let live = true;
-    void fetchRecs(current.id, dial).then((items) => {
-      if (!live || !items.length) return;
-      const fresh = items.filter((i) => !fetchedIds.current.has(i.id));
-      if (!fresh.length) return;
-      fresh.forEach((i) => fetchedIds.current.add(i.id));
-      // Capped: a long session would otherwise grow the pool without bound and
-      // slow every subsequent pick.
-      setFetched((cur) => [...cur, ...fresh].slice(-4000));
+    setApiOffers(null);
+    void fetchOffers(current.id, dial).then((offers) => {
+      if (live) setApiOffers(offers);
     });
     return () => { live = false; };
   }, [current, dial]);
@@ -196,7 +210,33 @@ export default function App() {
   const branches = useMemo<Branch[]>(() => {
     if (!current) return [];
     const exclude = new Set(trail.slice(0, focusIndex + 1));
-    const picked = pickBranches(current, pool, dial, exclude, fbWeights);
+
+    /*
+     * Prefer the server's offers, which are scored over the whole catalog
+     * rather than the slice that fits in a bundle.
+     *
+     * Two reasons they can still be refused. A verdict is stored in this
+     * browser and never sent anywhere, so the server cannot know a step was
+     * rejected and would keep offering it — feedback would silently stop
+     * working the moment the API came online. And an offer already on the path
+     * would send the listener in a circle.
+     *
+     * Falling back to the local engine rather than dropping the offer keeps
+     * two doors on screen either way.
+     */
+    const usable = (apiOffers ?? []).filter(
+      (o) => !exclude.has(o.item.id) && verdictFor(o.item.id, current.id) !== 'bad',
+    );
+    const picked =
+      usable.length === 2
+        ? usable.map((o) => ({
+            item: o.item,
+            reason: describeMove(current, o.item),
+            corridorLabel: null,
+            role: o.role,
+            distance: o.distance,
+          }))
+        : pickBranches(current, pool, dial, exclude, fbWeights);
 
     // If you've walked past this card before, the branch you actually took has
     // to stay on offer — otherwise stepping back and then forward again would
@@ -231,7 +271,7 @@ export default function App() {
     const out = [...picked];
     out[idx === -1 ? 1 : idx] = replacement;
     return out;
-  }, [current, trail, focusIndex, dial, pool, byId, fbWeights]);
+  }, [current, trail, focusIndex, dial, pool, byId, fbWeights, apiOffers]);
 
   const wildcard = useMemo(() => {
     if (!current) return null;

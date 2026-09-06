@@ -18,11 +18,14 @@ import os
 import re
 import sqlite3
 import sys
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import engine  # noqa: E402
 DB = ROOT / "data" / "catalog-api.sqlite"
 
 MBID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
@@ -147,45 +150,84 @@ def get_items(conn, ids: list[str]) -> list[dict]:
     return rows_to_items(conn, conn.execute(q, ids).fetchall())
 
 
+# Built once at startup: the whole scorable catalog, shaped for the engine.
+#
+# Deriving vectors and tag sets per request would redo the same work for every
+# card. ~92,000 albums at a few hundred bytes each is well inside the machine's
+# memory, and it is read-only, so every thread shares one copy.
+_POOL: list[dict] | None = None
+_POOL_BY_ID: dict[str, dict] = {}
+
+
+def build_pool(conn: sqlite3.Connection) -> None:
+    global _POOL
+    rows = conn.execute(f"{SELECT} WHERE {ELIGIBLE}").fetchall()
+    ids = [r["id"] for r in rows]
+    tags: dict[str, list] = {i: [] for i in ids}
+    for start in range(0, len(ids), 500):
+        chunk = ids[start:start + 500]
+        q = f"SELECT item_id, tag, count FROM item_tags WHERE item_id IN ({','.join('?' * len(chunk))})"
+        for t in conn.execute(q, chunk):
+            tags[t["item_id"]].append({"tag": t["tag"], "count": t["count"]})
+
+    pool = []
+    for r in rows:
+        t = tags.get(r["id"], [])
+        # The same coverage filter the client applies. An album the lexicon
+        # barely knows derives a dead-centre vector and looks similar to
+        # everything; dropping it here keeps both engines choosing from the
+        # same catalog.
+        if engine.lexicon_coverage(t) < engine.MIN_COVERAGE:
+            continue
+        pool.append({
+            "id": r["id"],
+            "idBytes": r["id"].encode(),
+            "artistId": r["artist_id"],
+            "popularity": absolute_popularity(r["listener_count"]),
+            "quality": absolute_quality(r["listen_count"], r["listener_count"],
+                                        r["rating"], r["rating_votes"]),
+            "vector": engine.derive_vector(t, r["year_start"]),
+            "sv": engine.scaled_vector(engine.derive_vector(t, r["year_start"])),
+            "tagSet": engine.musical_tags(t),
+            "row": r,
+        })
+    _POOL = pool
+    _POOL_BY_ID.clear()
+    _POOL_BY_ID.update({p["id"]: p for p in pool})
+
+
 def get_recs(conn, item_id: str, dial: float, limit: int) -> dict:
     """
-    Candidates for one card.
+    Two scored offers for one card, chosen from the whole catalog.
 
-    Phase 1 returns a pool and lets the client score it, unchanged. The point of
-    the split is that a regression stays attributable: if held-out agreement
-    moves after this ships, it is the transport, because the scorer did not
-    change. Phase 2 replaces this body with the scorer and returns offers.
-
-    The pool is drawn around the dial's popularity target, which is what the
-    engine's fame term aims at, so the candidates it needs are present without
-    sending it the whole catalog.
+    Phase 1 returned a candidate pool and let the client score it, which meant
+    the query had to guess what the scorer would want before the scorer had
+    seen anything. This removes the guess. The engine is a port of the client's
+    and is checked against it — api/parity-check.py requires the same albums in
+    the same roles for the same seeds at every dial setting, not merely similar
+    ones.
     """
     if not MBID.match(item_id):
         return {"error": "bad id"}
-    seed = conn.execute(f"{SELECT} WHERE i.id = ?", (item_id,)).fetchone()
-    if not seed:
-        return {"error": "not found"}
+    if _POOL is None:
+        return {"error": "not ready"}
+    seed = _POOL_BY_ID.get(item_id)
+    if seed is None:
+        # Known to the catalog but not scorable — no art, no tags, or too
+        # little lexicon coverage to place on the axes.
+        row = conn.execute(f"{SELECT} WHERE i.id = ?", (item_id,)).fetchone()
+        return {"error": "not found"} if row is None else {"error": "not scorable"}
 
-    # popularityNear 9.8 -> popularityFar 3.0, matching TUNING in the engine.
-    target = 9.8 + (3.0 - 9.8) * max(0.0, min(1.0, dial))
-    # Percentile band around the target, widened enough to cover the Gaussian.
-    lo, hi = (target - 3.0) / 10.0, (target + 3.0) / 10.0
-    total = conn.execute("SELECT COUNT(*) FROM items WHERE listener_count IS NOT NULL").fetchone()[0]
-    q = f"""
-        {SELECT}
-        WHERE {ELIGIBLE} AND i.id != ?
-          AND i.listener_count IS NOT NULL
-          AND i.listener_count BETWEEN
-              (SELECT listener_count FROM items WHERE listener_count IS NOT NULL
-               ORDER BY listener_count LIMIT 1 OFFSET ?)
-          AND (SELECT listener_count FROM items WHERE listener_count IS NOT NULL
-               ORDER BY listener_count LIMIT 1 OFFSET ?)
-        ORDER BY RANDOM() LIMIT ?
-    """
-    off_lo = max(0, int(total * lo))
-    off_hi = min(total - 1, int(total * hi))
-    rows = conn.execute(q, (item_id, off_lo, off_hi, limit)).fetchall()
-    return {"seed": rows_to_items(conn, [seed])[0], "candidates": rows_to_items(conn, rows)}
+    offers = engine.pick_branches(seed, _POOL, dial, {item_id})
+    return {
+        "seed": rows_to_items(conn, [seed["row"]])[0],
+        "offers": [{
+            "role": o["role"],
+            "distance": round(o["distance"], 6),
+            "score": o["score"],
+            "item": rows_to_items(conn, [o["item"]["row"]])[0],
+        } for o in offers],
+    }
 
 
 def get_search(conn, text: str, limit: int) -> list[dict]:
@@ -308,6 +350,8 @@ def main() -> int:
         print(f"no {DB} — run api/make-api-db.py first", file=sys.stderr)
         return 1
     Handler.conn = connect()
+    build_pool(Handler.conn)
+    print(f"engine pool: {len(_POOL or []):,} scorable albums", flush=True)
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     n = Handler.conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
     print(f"serving {n:,} albums on http://{args.host}:{args.port}", flush=True)
