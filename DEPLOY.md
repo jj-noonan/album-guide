@@ -60,6 +60,22 @@ Joni Mitchell is a good test precisely because she has zero albums in the
 bundled catalog the site ships today. If she comes back, the API is serving
 something the site cannot.
 
+## After significant catalog growth
+
+`data/engine-constants.json` holds the axis spreads and tag informativeness,
+computed over the whole database. They drift as the catalog grows, and nothing
+regenerates them automatically — deliberately, because regenerating them
+changes every distance and overlap in the engine, which is a scoring change and
+wants measuring rather than shipping quietly:
+
+    npm run engine-constants     # recompute from the current database
+    npm run engine-parity        # both engines must still agree: 75/75
+    .venv/bin/python api/eval-full.py --starts 24   # held-out must not drop
+
+Do this after adding tens of thousands of albums, not after every crawl. A few
+thousand new records move the statistics by very little, and the eval cannot
+resolve a change smaller than about four points anyway.
+
 ## Updating the data after a crawl
 
     .venv/bin/python api/make-api-db.py
