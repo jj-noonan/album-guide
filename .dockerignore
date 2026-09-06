@@ -3,4 +3,7 @@
 # deploy for nothing.
 *
 !api/server.py
+!api/engine.py
+!data/lexicon.json
+!data/engine-constants.json
 !data/catalog-api.sqlite

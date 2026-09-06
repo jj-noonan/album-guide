@@ -22,9 +22,15 @@ for verification even on the free-ish tier)
 
     .venv/bin/python api/make-api-db.py
 
-Produces `data/catalog-api.sqlite`, ~125 MB — the crawl database with the
-crawler's bookkeeping dropped. It is gitignored and rebuilt from
+Produces `data/catalog-api.sqlite`, ~126 MB. It is gitignored and rebuilt from
 `data/catalog.sqlite` whenever you want to publish fresher data.
+
+The engine's constants (`data/lexicon.json`, `data/engine-constants.json`) are
+committed, so they need rebuilding only after editing the lexicon or crawling
+enough to shift the catalog's statistics:
+
+    npm run engine-constants
+    npm run engine-parity     # both engines must still agree: 75/75
 
 **4. Create the app** — this only registers the name, it does not deploy
 
@@ -94,6 +100,14 @@ for this reason — don't remove it.
 **Deploy uploads far more than it should.** `.dockerignore` allows only
 `api/server.py` and `data/catalog-api.sqlite`. Without it, the 143 MB crawl
 database and `node_modules` go up on every deploy.
+
+**The machine starts and dies immediately.** The image copies exactly the
+files the server opens: `api/server.py`, `api/engine.py`, `data/lexicon.json`,
+`data/engine-constants.json` and the database. Adding a runtime dependency
+without adding a COPY line builds cleanly and fails on first import — a deploy
+that reports success and a machine that never answers. To check before
+deploying, copy just those paths into an empty directory and run the server
+there.
 
 **Health checks fail after a data update.** `/v1/health` counts rows, so it
 fails if `catalog-api.sqlite` is missing or truncated — which is the point.
