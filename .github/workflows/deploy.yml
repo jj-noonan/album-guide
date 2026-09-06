@@ -26,6 +26,13 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+        env:
+          # Set here rather than in .env.production, which .gitignore excludes
+          # and CI would therefore never see — the build would silently produce
+          # a site with no API and look entirely fine. It is a public read-only
+          # endpoint, not a secret, so it belongs in the deployment definition
+          # where it can be read.
+          VITE_API_BASE: https://seebugbus-api.fly.dev
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
