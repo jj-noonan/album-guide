@@ -12,3 +12,6 @@ data/*.sqlite-shm
 # Secrets — never commit
 .env
 .env.*
+
+# Built by api/make-api-db.py from catalog.sqlite; 125 MB, reproducible.
+data/catalog-api.sqlite
