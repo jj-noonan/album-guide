@@ -9,7 +9,7 @@
  *
  *   npx vite-node scripts/dist-check.ts
  */
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 
 const dist = new URL('../dist/', import.meta.url);
@@ -94,6 +94,41 @@ for (const [what, sel] of [
     problems.push(`rendered page has no ${what} (${sel})`);
   }
 }
+/*
+ * Every image the rendered page asks for must exist in the build.
+ *
+ * A broken src renders as a blank box rather than an error, so a rebrand that
+ * renames assets can leave the logo missing and every check still green. This
+ * caught nothing on the first run only because the paths were checked by hand;
+ * it should not need checking by hand again.
+ */
+{
+  const imgs = [...(root?.querySelectorAll('img') ?? [])]
+    .map((el) => (el as HTMLImageElement).getAttribute('src') ?? '')
+    .filter(Boolean);
+  const missing = imgs.filter((src) => {
+    if (/^(https?:|data:)/.test(src)) return false;
+    return !existsSync(new URL(src.replace(/^\.\//, ''), dist));
+  });
+  console.log(`images:      ${imgs.length} referenced, ${missing.length} missing`);
+  missing.forEach((m) => problems.push(`image not in build: ${m}`));
+}
+
+// The brand typeface has to be the one actually bundled, not a fallback.
+{
+  const cssFiles = assets.filter((f) => f.endsWith('.css'));
+  const css = cssFiles
+    .map((f) => readFileSync(new URL(`assets/${f}`, dist), 'utf8'))
+    .join('\n');
+  if (!/font-family:\s*['"]?Jost/i.test(css)) {
+    problems.push('Jost is not declared in the bundled CSS');
+  }
+  const banned = ['Outfit', 'Playfair'];
+  banned.forEach((f) => {
+    if (css.includes(f)) problems.push(`${f} is still bundled — it breaks the logo's a`);
+  });
+}
+
 errors.forEach((e) => problems.push(`runtime error: ${e}`));
 
 console.log(problems.length ? `\nPROBLEMS:\n  ${problems.join('\n  ')}` : '\nDIST OK');
